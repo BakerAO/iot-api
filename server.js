@@ -3,6 +3,12 @@ const server = express();
 const mysql = require('mysql');
 require('dotenv').config();
 
+server.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "innov8.host");
+    res.header("Access-Control-Allow-Headers", "*");
+    next();
+});
+
 server.get("/temperatures", (req, res) => {
     const connection = mysql.createConnection({
         host: process.env.MYSQL_HOST,
