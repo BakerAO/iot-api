@@ -21,6 +21,6 @@ server.get("/temperatures", (req, res) => {
     });
 });
 
-server.listen(3003, () => {
+server.listen(80, () => {
     console.log("Started")
 });
