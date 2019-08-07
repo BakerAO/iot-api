@@ -20,7 +20,7 @@ app.get("/", (req, res) => {
 app.use(express.static(__dirname, { dotfiles: 'allow' } ));
 
 app.use(function(req, res, next) {
-   res.header("Access-Control-Allow-Origin", "innov8.host");
+   res.header("Access-Control-Allow-Origin", "https://innov8.host");
    res.header("Access-Control-Allow-Headers", "*");
    next();
 });
