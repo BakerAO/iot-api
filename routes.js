@@ -43,16 +43,24 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-    const query = `SELECT * FROM users
+    const query = `
+        SELECT * FROM users
         WHERE user_email = '${req.body.user_email}'
     `;
-    const userEmail = connection.query(query, (err) => {
+
+    connection.query(query, async (err, rows, fields) => {
         if (err) {
             res.status(400).send(err);
         } else {
-            return
+            const validPassword = await bcrypt.compare(req.body.user_password, rows[0].user_password);
+            console.log(validPassword)
+            if (!validPassword) {
+                res.send('You idiot')
+            } else {
+                res.send('Nice')
+            }
         }
-    })
+    });
 });
 
 module.exports = router;
