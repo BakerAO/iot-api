@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
-const privateKey = 'secretKey';
 const connection = mysql.createConnection({
     host: process.env.MYSQL_HOST,
     port: process.env.MYSQL_PORT,
@@ -15,16 +14,16 @@ const connection = mysql.createConnection({
      // }
 });
 
-function extractToken(req, res, next) {
-    const bearerHeader = req.headers.authorization;
-    if (bearerHeader !== undefined) {
-        const bearer = bearerHeader.split(' ');
-        const token = bearer[1];
-        req.token = token;
-        next();
-    } else {
-        res.sendStatus(403);
-    }
+function verifyToken(req, res, next) {
+    const authToken = req.headers.auth_token;
+    if (!authToken) return res.status(403);
+    jwt.verify(authToken, process.env.TOKEN_SECRET, (err, authData) => {
+        if (err) res.status(400).send('Invalid Token');
+        else {
+            req.verified_id = authData.user.user_id;
+            next();
+        }
+    });
 }
 
 // Routes
@@ -32,17 +31,13 @@ router.get('/', (req, res) => {
 	res.send('Hi');
 });
 
-router.get("/temperatures", extractToken, (req, res) => {
-    jwt.verify(req.token, privateKey, (err, authData) => {
-        if (err) res.status(403)
-        else {
-            const query = `SELECT * FROM temperatures`;
-            connection.query(query, (err, rows, fields) => {
-                if (err) res.status(500);
-                else res.json(rows)
-            });
-        }
+router.get("/temperatures", verifyToken, (req, res) => {
+    const query = `SELECT * FROM temperatures`;
+    connection.query(query, (err, rows, fields) => {
+        if (err) res.status(500);
+        else res.json(rows)
     });
+    console.log(req.verified_id)
 });
 
 router.post('/register', async (req, res) => {
@@ -83,7 +78,7 @@ router.post('/login', (req, res) => {
         user_email: req.body.user_email
     };
 
-    jwt.sign({ user: user }, privateKey, { expiresIn: '7 days' }, (err, token) => {
+    jwt.sign({ user: user }, process.env.TOKEN_SECRET, { expiresIn: '7 days' }, (err, token) => {
         res.json({ token: token });
     });
 
