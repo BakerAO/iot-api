@@ -16,8 +16,8 @@ const connection = mysql.createConnection({
 });
 
 function extractToken(req, res, next) {
-    const bearerHeader = req.headers['Authorization'];
-    if (typeof bearerHeader !== undefined) {
+    const bearerHeader = req.headers.authorization;
+    if (bearerHeader !== undefined) {
         const bearer = bearerHeader.split(' ');
         const token = bearer[1];
         req.token = token;
@@ -33,27 +33,46 @@ router.get('/', (req, res) => {
 });
 
 router.get("/temperatures", extractToken, (req, res) => {
-    jwt.verify(req.token, );
-    //  const query = `SELECT * FROM temperatures`;
-    //  connection.query(query, (err, rows, fields) => {
-    //     res.json(rows)
-    // });
+    jwt.verify(req.token, privateKey, (err, authData) => {
+        if (err) res.status(403)
+        else {
+            const query = `SELECT * FROM temperatures`;
+            connection.query(query, (err, rows, fields) => {
+                if (err) res.status(500);
+                else res.json(rows)
+            });
+        }
+    });
 });
 
 router.post('/register', async (req, res) => {
-    const salt = await bcrypt.genSalt(10);
-    const hashPassword = await bcrypt.hash(req.body.user_password, salt);
-    const date = Date.now();
-    const query = `
-        INSERT INTO users (user_email, user_password, user_created)
-        VALUES ('${req.body.user_email}', '${hashPassword}', '${date}');
+    const emailExists = `
+        SELECT *
+        FROM users
+        WHERE user_email = '${req.body.user_email}'
     `;
-    connection.query(query, (err, rows, fields) => {
+    connection.query(emailExists, async (err, rows, fields) => {
         if (err) {
             console.log(err);
-            res.status(400).send(err);
+            res.status(500).send(err);
+        } else if (rows.length > 0) {
+            res.status(200).send('emailExists');
         } else {
-            res.sendStatus(200);
+            const salt = await bcrypt.genSalt(10);
+            const hashPassword = await bcrypt.hash(req.body.user_password, salt);
+            const date = Date.now();
+            const insertUser = `
+                INSERT INTO users (user_email, user_password, user_created)
+                VALUES ('${req.body.user_email}', '${hashPassword}', '${date}');
+            `;
+            connection.query(insertUser, (err, rows, fields) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).send(err);
+                } else {
+                    res.sendStatus(200);
+                }
+            });
         }
     });
 });
@@ -64,7 +83,7 @@ router.post('/login', (req, res) => {
         user_email: req.body.user_email
     };
 
-    jwt.sign({ user: user }, privateKey, (err, token) => {
+    jwt.sign({ user: user }, privateKey, { expiresIn: '7 days' }, (err, token) => {
         res.json({ token: token });
     });
 
