@@ -63,9 +63,10 @@ router.post('/register', async (req, res) => {
 })
 
 router.post('/login', (req, res) => {
+  console.log(req.body)
   const getUserEmail = `
-  SELECT * FROM users
-  WHERE user_email = '${req.body.user_email}'
+    SELECT * FROM users
+    WHERE user_email = '${req.body.user_email}'
   `
   connection.query(getUserEmail, async (err, rows, fields) => {
     if (err) {
