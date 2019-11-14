@@ -2,6 +2,7 @@ const router = require('express').Router()
 const jwt = require('jsonwebtoken')
 const mysql = require('mysql')
 const bcrypt = require('bcryptjs')
+const moment = require('moment')
 require('dotenv').config()
 const connection = mysql.createConnection({
   host: process.env.MYSQL_HOST,
@@ -44,11 +45,11 @@ router.post('/register', async (req, res) => {
       res.status(200).send('emailExists')
     } else {
       const salt = await bcrypt.genSalt(10)
-      const hashPassword = await bcrypt.hash(req.body.user_password, salt)
-      const date = Date.now()
+      const hashPassword = await bcrypt.hash(req.body.user_password, salt, 11)
+      const date = new Date()
       const insertUser = `
-      INSERT INTO users (user_email, user_password, user_created)
-      VALUES ('${req.body.user_email}', '${hashPassword}', '${date}')
+        INSERT INTO users (user_email, user_password, user_created)
+        VALUES ('${req.body.user_email}', '${hashPassword}', '${date}')
       `
       connection.query(insertUser, (err, rows, fields) => {
         if (err) {
@@ -87,7 +88,7 @@ router.post('/login', (req, res) => {
   })
 })
 
-router.get("/thermometers", verifyToken, (req, res) => {
+router.get('/thermometers', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
     FROM devices
@@ -120,6 +121,52 @@ router.get("/thermometers", verifyToken, (req, res) => {
           if (i === rows.length - 1) res.json(devices)
         })
       }
+    }
+  })
+})
+
+router.post('/devices/thermometers', (req, res) => {
+  const date = moment().format('YYYY-MM-DD HH:mm:ss')
+  const insertThermometers = `
+    INSERT INTO thermometers (
+      device_id, degrees_celsius, humidity_percent, date_time
+    )
+    VALUES (
+      ${parseInt(req.body.deviceId)},
+      ${parseFloat(req.body.temperature)},
+      ${parseFloat(req.body.humidity)},
+      '${date}'
+    )
+  `
+  connection.query(insertThermometers, (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else {
+      const deviceRecords = `
+        SELECT date_time
+        FROM thermometers
+        WHERE device_id = ${req.body.deviceId}
+        ORDER BY date_time DESC
+        LIMIT 10
+      `
+      connection.query(deviceRecords, async (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else {
+          let dateTimes = ''
+          for (let i = 0; i < rows.length; i++) {
+            dateTimes += '\'' + moment(rows[i].date_time).format('YYYY-MM-DD HH:mm:ss') + '\','
+          }
+          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+          const deleteDevices = `
+            DELETE FROM thermometers
+            WHERE device_id = ${req.body.deviceId}
+            AND date_time NOT IN (${dateTimes})
+          `
+          connection.query(deleteDevices, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        }
+      })
     }
   })
 })
