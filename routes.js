@@ -65,7 +65,8 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', (req, res) => {
   const getUserEmail = `
-    SELECT * FROM users
+    SELECT *
+    FROM users
     WHERE user_email = '${req.body.user_email}'
   `
   connection.query(getUserEmail, async (err, rows, fields) => {
