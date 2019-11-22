@@ -101,12 +101,12 @@ router.get('/thermometers', verifyToken, (req, res) => {
       let devices = []
       for (let i = 0; i < rows.length; i++) {
         let device = {}
-        device.id = rows[i].device_id
-        device.alias = rows[i].device_alias
+        device.device_id = rows[i].device_id
+        device.device_alias = rows[i].device_alias
         const getTemperatures = `
           SELECT *
           FROM thermometers
-          WHERE device_id = ${device.id}
+          WHERE device_id = ${device.device_id}
         `
         connection.query(getTemperatures, (tempErr, tempRows, tempFields) => {
           if (tempErr) res.status(500)
