@@ -5,6 +5,6 @@ COPY . /iot
 
 RUN npm install
 
-EXPOSE 80 443
+EXPOSE 8081
 
-CMD [ "node", "server-dev.js" ]
+CMD [ "node", "server.js" ]

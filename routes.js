@@ -31,6 +31,10 @@ router.get('/', (req, res) => {
 	res.send('Hi')
 })
 
+router.get('/health', (req, res) => {
+	res.send('Health')
+})
+
 
 router.post('/register', async (req, res) => {
   const emailExists = `
