@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const jwt = require('jsonwebtoken')
 const mysql = require('mysql')
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcrypt')
 const moment = require('moment')
 require('dotenv').config()
 const connection = mysql.createConnection({
@@ -9,10 +9,7 @@ const connection = mysql.createConnection({
   port: process.env.MYSQL_PORT,
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
-  database: 'iot',
-    // ssl: {
-    //     ca: fs.readFileSync(__dirname + '/ca.crt')
-    // }
+  database: 'iot'
 })
 
 function verifyToken(req, res, next) {
@@ -21,7 +18,7 @@ function verifyToken(req, res, next) {
   jwt.verify(authToken, process.env.TOKEN_SECRET, (err, authData) => {
     if (err) res.status(400).send('Invalid Token')
     else {
-      req.verified_id = authData.user.user_id
+      req.verified_id = authData.user.id
       next()
     }
   })
@@ -31,37 +28,28 @@ router.get('/', (req, res) => {
 	res.send('Hi')
 })
 
-router.get('/health', (req, res) => {
-	res.send('Health')
-})
-
-
 router.post('/register', async (req, res) => {
   const emailExists = `
-  SELECT *
-  FROM users
-  WHERE user_email = '${req.body.user_email}'
+    SELECT *
+    FROM users
+    WHERE email = '${req.body.email}'
   `
   connection.query(emailExists, async (err, rows, fields) => {
-    if (err) {
-      res.status(500).send(err)
-    } else if (rows.length > 0) {
-      res.status(200).send('emailExists')
-    } else {
-      const salt = await bcrypt.genSalt(10)
-      const hashPassword = await bcrypt.hash(req.body.user_password, salt, 11)
-      const date = new Date()
-      const insertUser = `
-        INSERT INTO users (user_email, user_password, user_created)
-        VALUES ('${req.body.user_email}', '${hashPassword}', '${date}')
-      `
-      connection.query(insertUser, (err, rows, fields) => {
-        if (err) {
-          console.log(err)
-          res.status(500).send(err)
-        } else {
-          res.sendStatus(200)
-        }
+    if (err) res.status(500).send(err)
+    else if (rows.length > 0) res.status(200).send('emailExists')
+    else {
+      bcrypt.genSalt(10, async function (err, salt) {
+        bcrypt.hash(req.body.password, salt, function (err, hash) {
+          const date = moment().format('YYYY-MM-DD HH:mm:ss')
+          const insertUser = `
+            INSERT INTO users (email, password, created)
+            VALUES ('${req.body.email}', '${hash}', '${date}')
+          `
+          connection.query(insertUser, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        })
       })
     }
   })
@@ -71,23 +59,26 @@ router.post('/login', (req, res) => {
   const getUserEmail = `
     SELECT *
     FROM users
-    WHERE user_email = '${req.body.user_email}'
+    WHERE email = '${req.body.email}'
   `
   connection.query(getUserEmail, async (err, rows, fields) => {
-    if (err) {
-      res.status(400).send(err)
-    } else {
-      const validPassword = await bcrypt.compare(req.body.user_password, rows[0].user_password)
-      if (!validPassword) {
-        res.send('You failed')
-      } else {
+    if (err) res.status(400).send(err)
+    else {
+      const validPassword = await bcrypt.compare(req.body.password, rows[0].password)
+      if (!validPassword) res.sendStatus(401)
+      else {
         const user = {
-          user_id: rows[0].user_id,
-          user_email: rows[0].user_email
+          id: rows[0].id,
+          email: rows[0].email
         }
-        jwt.sign({ user: user }, process.env.TOKEN_SECRET, { expiresIn: '7 days' }, (err, token) => {
-          res.json({ token: token })
-        })
+        jwt.sign(
+          { user: user },
+          process.env.TOKEN_SECRET,
+          { expiresIn: '7 days' },
+          (err, token) => {
+            res.json({ token: token })
+          }
+        )
       }
     }
   })
@@ -106,12 +97,12 @@ router.get('/thermometers', verifyToken, (req, res) => {
       let devices = []
       for (let i = 0; i < rows.length; i++) {
         let device = {}
-        device.device_id = rows[i].device_id
-        device.device_alias = rows[i].device_alias
+        device.id = rows[i].id
+        device.alias = rows[i].alias
         const getTemperatures = `
           SELECT *
           FROM thermometers
-          WHERE device_id = ${device.device_id}
+          WHERE device_id = ${device.id}
         `
         connection.query(getTemperatures, (tempErr, tempRows, tempFields) => {
           if (tempErr) res.status(500)
@@ -134,44 +125,46 @@ router.post('/devices/thermometers', (req, res) => {
   const date = moment().format('YYYY-MM-DD HH:mm:ss')
   const insertThermometers = `
     INSERT INTO thermometers (
-      device_id, degrees_celsius, humidity_percent, date_time
+      device_id, temperature, humidity, datetime
     )
     VALUES (
-      ${parseInt(req.body.deviceId)},
+      ${parseInt(req.body.device_id)},
       ${parseFloat(req.body.temperature)},
       ${parseFloat(req.body.humidity)},
       '${date}'
     )
   `
+
   connection.query(insertThermometers, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
-      const deviceRecords = `
-        SELECT date_time
-        FROM thermometers
-        WHERE device_id = ${req.body.deviceId}
-        ORDER BY date_time DESC
-        LIMIT 10
-      `
-      connection.query(deviceRecords, async (err, rows, fields) => {
-        if (err) res.status(500).send(err)
-        else {
-          let dateTimes = ''
-          for (let i = 0; i < rows.length; i++) {
-            dateTimes += '\'' + moment(rows[i].date_time).format('YYYY-MM-DD HH:mm:ss') + '\','
-          }
-          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-          const deleteDevices = `
-            DELETE FROM thermometers
-            WHERE device_id = ${req.body.deviceId}
-            AND date_time NOT IN (${dateTimes})
-          `
-          connection.query(deleteDevices, (err, rows, fields) => {
-            if (err) res.status(500).send(err)
-            else res.sendStatus(200)
-          })
-        }
-      })
+      // const deviceRecords = `
+      //   SELECT datetime
+      //   FROM thermometers
+      //   WHERE device_id = ${req.body.device_id}
+      //   ORDER BY date_time DESC
+      //   LIMIT 10
+      // `
+      // connection.query(deviceRecords, async (err, rows, fields) => {
+      //   if (err) res.status(500).send(err)
+      //   else {
+      //     let dateTimes = ''
+      //     for (let i = 0; i < rows.length; i++) {
+      //       dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+      //     }
+      //     if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+      //     const deleteDevices = `
+      //       DELETE FROM thermometers
+      //       WHERE device_id = ${req.body.device_id}
+      //       AND datetime NOT IN (${dateTimes})
+      //     `
+      //     connection.query(deleteDevices, (err, rows, fields) => {
+      //       if (err) res.status(500).send(err)
+      //       else res.sendStatus(200)
+      //     })
+      //   }
+      // })
+      res.sendStatus(200)
     }
   })
 })
