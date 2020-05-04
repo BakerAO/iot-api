@@ -118,7 +118,6 @@ router.get('/thermometers', verifyToken, (req, res) => {
 })
 
 router.post('/devices', (req, res) => {
-  // console.log(req.body)
   if (req.body.temperature !== undefined) {
     insertThermometers(req.body, res)
   }
