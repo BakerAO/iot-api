@@ -88,7 +88,7 @@ router.get('/thermometers', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
     FROM devices
-    WHERE device_type = 'thermometer'
+    WHERE type = 'thermometer'
     AND user_id = ${req.verified_id}
   `
   connection.query(getDevices, (err, rows, fields) => {
@@ -103,16 +103,12 @@ router.get('/thermometers', verifyToken, (req, res) => {
           SELECT *
           FROM thermometers
           WHERE device_id = ${device.id}
+          ORDER BY datetime DESC
+          LIMIT 10
         `
         connection.query(getTemperatures, (tempErr, tempRows, tempFields) => {
           if (tempErr) res.status(500)
-          else {
-            const temperatures = []
-            for (let j = 0; j < tempRows.length; j++) {
-              temperatures.push(tempRows[j])
-            }
-            device.temperatures = temperatures
-          }
+          else device.temperatures = tempRows
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
         })
@@ -121,52 +117,60 @@ router.get('/thermometers', verifyToken, (req, res) => {
   })
 })
 
-router.post('/devices/thermometers', (req, res) => {
+router.post('/devices', (req, res) => {
+  // console.log(req.body)
+  if (req.body.temperature !== undefined) {
+    insertThermometers(req.body, res)
+  }
+})
+
+function insertThermometers(body, res) {
   const date = moment().format('YYYY-MM-DD HH:mm:ss')
-  const insertThermometers = `
+  const insertQuery = `
     INSERT INTO thermometers (
-      device_id, temperature, humidity, datetime
+      device_id,
+      temperature,
+      humidity,
+      datetime
     )
     VALUES (
-      ${parseInt(req.body.device_id)},
-      ${parseFloat(req.body.temperature)},
-      ${parseFloat(req.body.humidity)},
+      ${parseInt(body.device_id)},
+      ${parseFloat(body.temperature)},
+      ${parseFloat(body.humidity)},
       '${date}'
     )
   `
-
-  connection.query(insertThermometers, (err, rows, fields) => {
+  connection.query(insertQuery, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
-      // const deviceRecords = `
-      //   SELECT datetime
-      //   FROM thermometers
-      //   WHERE device_id = ${req.body.device_id}
-      //   ORDER BY date_time DESC
-      //   LIMIT 10
-      // `
-      // connection.query(deviceRecords, async (err, rows, fields) => {
-      //   if (err) res.status(500).send(err)
-      //   else {
-      //     let dateTimes = ''
-      //     for (let i = 0; i < rows.length; i++) {
-      //       dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-      //     }
-      //     if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-      //     const deleteDevices = `
-      //       DELETE FROM thermometers
-      //       WHERE device_id = ${req.body.device_id}
-      //       AND datetime NOT IN (${dateTimes})
-      //     `
-      //     connection.query(deleteDevices, (err, rows, fields) => {
-      //       if (err) res.status(500).send(err)
-      //       else res.sendStatus(200)
-      //     })
-      //   }
-      // })
-      res.sendStatus(200)
+      const deviceRecords = `
+        SELECT datetime
+        FROM thermometers
+        WHERE device_id = ${body.device_id}
+        ORDER BY datetime DESC
+        LIMIT 100
+      `
+      connection.query(deviceRecords, async (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else {
+          let dateTimes = ''
+          for (let i = 0; i < rows.length; i++) {
+            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+          }
+          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+          const deleteDevices = `
+            DELETE FROM thermometers
+            WHERE device_id = ${body.device_id}
+            AND datetime NOT IN (${dateTimes})
+          `
+          connection.query(deleteDevices, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        }
+      })
     }
   })
-})
+}
 
 module.exports = router
