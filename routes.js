@@ -136,8 +136,8 @@ router.get('/magnets', verifyToken, (req, res) => {
           SELECT *
           FROM magnets
           WHERE device_id = ${device.id}
+          AND datetime BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW()
           ORDER BY datetime DESC
-          LIMIT 1
         `
         connection.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
