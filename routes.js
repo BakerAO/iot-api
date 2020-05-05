@@ -141,7 +141,7 @@ router.get('/magnets', verifyToken, (req, res) => {
         `
         connection.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
-          else device.status = records
+          else device.data = records
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
         })
