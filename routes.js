@@ -132,16 +132,16 @@ router.get('/magnets', verifyToken, (req, res) => {
         let device = {}
         device.id = rows[i].id
         device.alias = rows[i].alias
-        const getTemperatures = `
+        const getMagnets = `
           SELECT *
           FROM magnets
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
-          LIMIT 10
+          LIMIT 1
         `
-        connection.query(getTemperatures, (error, records, magFields) => {
+        connection.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
-          else device.temperatures = records
+          else device.status = records[0].status
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
         })
