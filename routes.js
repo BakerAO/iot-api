@@ -188,7 +188,7 @@ router.post('/devices', (req, res) => {
     insertThermometer(req.body, res)
   } else if (req.body.magnet !== undefined) {
     insertMagnet(req.body, res)
-  } else if (req.body.flowRate !== undefined) {
+  } else if (req.body.flow_rate !== undefined) {
     insertFlow(req.body, res)
   } else {
     res.sendStatus(402)
