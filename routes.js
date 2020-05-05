@@ -92,7 +92,17 @@ router.get('/devices', verifyToken, (req, res) => {
   `
   connection.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
-    else res.json(rows)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        device.type = rows[i].type
+        devices.push(device)
+      }
+      res.json(devices)
+    }
   })
 })
 
