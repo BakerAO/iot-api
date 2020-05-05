@@ -117,6 +117,39 @@ router.get('/thermometers', verifyToken, (req, res) => {
   })
 })
 
+router.get('/magnets', verifyToken, (req, res) => {
+  const getDevices = `
+    SELECT *
+    FROM devices
+    WHERE type = 'magnet'
+    AND user_id = ${req.verified_id}
+  `
+  connection.query(getDevices, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        const getTemperatures = `
+          SELECT *
+          FROM magnets
+          WHERE device_id = ${device.id}
+          ORDER BY datetime DESC
+          LIMIT 10
+        `
+        connection.query(getTemperatures, (error, records, magFields) => {
+          if (error) res.status(500)
+          else device.temperatures = records
+          devices.push(device)
+          if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
 router.post('/devices', (req, res) => {
   if (req.body.temperature !== undefined) {
     insertThermometers(req.body, res)
