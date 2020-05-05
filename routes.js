@@ -100,8 +100,8 @@ router.get('/devices', verifyToken, (req, res) => {
         device.alias = rows[i].alias
         device.type = rows[i].type
         devices.push(device)
+        if (i === rows.length - 1) res.json(devices)
       }
-      res.json(devices)
     }
   })
 })
