@@ -150,6 +150,39 @@ router.get('/magnets', verifyToken, (req, res) => {
   })
 })
 
+router.get('/water_flow', verifyToken, (req, res) => {
+  const getDevices = `
+    SELECT *
+    FROM devices
+    WHERE type = 'water_flow'
+    AND user_id = ${req.verified_id}
+  `
+  connection.query(getDevices, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        const getWaterFlow = `
+          SELECT flow_rate, total_output, datetime
+          FROM water_flow
+          WHERE device_id = ${device.id}
+          AND datetime BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW()
+          ORDER BY datetime DESC
+        `
+        connection.query(getWaterFlow, (error, records, magFields) => {
+          if (error) res.status(500)
+          else device.records = records
+          devices.push(device)
+          if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
 router.post('/devices', (req, res) => {
   if (req.body.temperature !== undefined) {
     insertThermometer(req.body, res)
@@ -264,13 +297,13 @@ function insertFlow(body, res) {
     INSERT INTO water_flow (
       device_id,
       flow_rate,
-      total_output
+      total_output,
       datetime
     )
     VALUES (
       ${parseInt(body.device_id)},
-      ${parseFloat(body.flowRate)},
-      ${parseFloat(body.totalOutput)},
+      ${parseFloat(body.flow_rate)},
+      ${parseFloat(body.total_output)},
       '${date}'
     )
   `
