@@ -120,6 +120,10 @@ router.get('/thermometers', verifyToken, (req, res) => {
 router.post('/devices', (req, res) => {
   if (req.body.temperature !== undefined) {
     insertThermometers(req.body, res)
+  } else if (req.body.magnet !== undefined) {
+    insertMagnets(req.body, res)
+  } else {
+    res.sendStatus(402)
   }
 })
 
@@ -159,6 +163,53 @@ function insertThermometers(body, res) {
           if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
           const deleteDevices = `
             DELETE FROM thermometers
+            WHERE device_id = ${body.device_id}
+            AND datetime NOT IN (${dateTimes})
+          `
+          connection.query(deleteDevices, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        }
+      })
+    }
+  })
+}
+
+function insertMagnets(body, res) {
+  const date = moment().format('YYYY-MM-DD HH:mm:ss')
+  const insertQuery = `
+    INSERT INTO magnets (
+      device_id,
+      status,
+      datetime
+    )
+    VALUES (
+      ${parseInt(body.device_id)},
+      ${parseInt(body.magnet)},
+      '${date}'
+    )
+  `
+  connection.query(insertQuery, (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else {
+      const deviceRecords = `
+        SELECT datetime
+        FROM magnets
+        WHERE device_id = ${body.device_id}
+        ORDER BY datetime DESC
+        LIMIT 100
+      `
+      connection.query(deviceRecords, async (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else {
+          let dateTimes = ''
+          for (let i = 0; i < rows.length; i++) {
+            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+          }
+          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+          const deleteDevices = `
+            DELETE FROM magnets
             WHERE device_id = ${body.device_id}
             AND datetime NOT IN (${dateTimes})
           `
