@@ -133,7 +133,7 @@ router.get('/magnets', verifyToken, (req, res) => {
         device.id = rows[i].id
         device.alias = rows[i].alias
         const getMagnets = `
-          SELECT *
+          SELECT status, datetime
           FROM magnets
           WHERE device_id = ${device.id}
           AND datetime BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW()
@@ -141,7 +141,7 @@ router.get('/magnets', verifyToken, (req, res) => {
         `
         connection.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
-          else device.data = records
+          else device.statuses = records
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
         })
