@@ -88,7 +88,7 @@ router.get('/devices', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
     FROM devices
-    AND user_id = ${req.verified_id}
+    WHERE user_id = ${req.verified_id}
   `
   connection.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
