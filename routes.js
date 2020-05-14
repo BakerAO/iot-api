@@ -165,7 +165,7 @@ router.get('/magnets', verifyToken, (req, res) => {
           FROM magnets
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
-          LIMIT 12
+          LIMIT 20
         `
         connection.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
