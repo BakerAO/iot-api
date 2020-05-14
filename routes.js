@@ -197,8 +197,8 @@ router.get('/water_flow', verifyToken, (req, res) => {
           SELECT flow_rate, total_output, datetime
           FROM water_flow
           WHERE device_id = ${device.id}
+          AND datetime BETWEEN DATE_SUB(NOW(), INTERVAL 24 HOUR) AND NOW()
           ORDER BY datetime DESC
-          LIMIT 12
         `
         connection.query(getWaterFlow, (error, records, magFields) => {
           if (error) res.status(500)
