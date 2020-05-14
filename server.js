@@ -1,5 +1,5 @@
 const express = require('express')
-const socket = require('socket.io')
+const socketio = require('socket.io')
 const routes = require('./routes')
 
 const app = express()
@@ -18,7 +18,7 @@ const server = app.listen(8081, () =>  {
 
 
 
-const io = socket(server)
+const io = socketio(server)
 let sessions = []
 
 io.on('connect', session => {
@@ -38,9 +38,6 @@ io.on('connect', session => {
 })
 
 app.get('/sockets', (req, res) => {
-
-
-
   res.send('Sockets page')
 })
 
