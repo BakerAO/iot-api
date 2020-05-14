@@ -12,13 +12,69 @@ app.use(function(req, res, next) {
   next()
 })
 app.use('/', routes)
-const server = app.listen(8081, () => console.log('Listening on port: 8081'))
+const server = app.listen(8081, () =>  {
+  console.log('Server Started: http://localhost:8081')
+})
+
+
 
 const io = socket(server)
-io.on('connection', connection => {
-  console.log(connection.id)
-  connection.on('iot', data => {
-    console.log('server: ', data)
-    io.emit('iot', data)
+let sessions = []
+
+io.on('connect', session => {
+  sessions.push(session.id)
+
+  session.on('toServer', data => {
+    console.log(data)
+  })
+
+  session.on('fromServer', data => {
+    console.log(data)
+  })
+
+  session.on('disconnect', () => {
+    sessions = sessions.filter(s => s !== session.id)
   })
 })
+
+app.get('/sockets', (req, res) => {
+
+
+
+  res.send('Sockets page')
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// function checkToken(token) {
+//   // if (token) return true
+//   return true
+// }
+
+// io.of((name, query, next) => {
+//   next(null, checkToken(query.token))
+// }).on('connect', session => {
+//   sessions.push(session.id)
+
+//   session.on('toServer', data => {
+//     console.log('data: ', data)
+//   })
+
+//   session.on('disconnect', () => {
+//     sessions = sessions.filter(s => s !== session.id)
+//   })
+// })
+

@@ -11,7 +11,6 @@ const connection = mysql.createConnection({
   password: process.env.MYSQL_PASSWORD,
   database: 'iot'
 })
-const socket = require('socket.io-client')
 
 function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
@@ -26,14 +25,6 @@ function verifyToken(req, res, next) {
 }
 
 router.get('/', (req, res) => {
-  const connection = socket.connect('http://localhost:8081')
-  connection.emit('iot', {
-    iotField1: 1,
-    iotField2: 2
-  })
-  connection.on('iot', data => {
-    console.log('client: ', data)
-  })
   res.send(`
     <html>
       <body>
