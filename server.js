@@ -1,6 +1,7 @@
 const express = require('express')
 const socketio = require('socket.io')
 const routes = require('./routes')
+const mqttClient = require('./mqttClient')
 
 const app = express()
 app.use(express.static(__dirname, { dotfiles: 'allow' } ))
@@ -15,8 +16,6 @@ app.use('/', routes)
 const server = app.listen(8081, () =>  {
   console.log('Server Started: http://localhost:8081')
 })
-
-
 
 const io = socketio(server)
 let sessions = []
@@ -41,19 +40,10 @@ app.get('/sockets', (req, res) => {
   res.send('Sockets page')
 })
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+app.post('/mqtt/test', (req, res) => {
+  mqttClient.sendMessage(req.body.message)
+  res.status(200).send(`${req.body.message} sent to broker`)
+})
 
 
 // function checkToken(token) {
