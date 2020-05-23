@@ -1,7 +1,6 @@
 const express = require('express')
 const socketio = require('socket.io')
 const routes = require('./routes')
-const mqttClient = require('./mqttClient')
 
 const app = express()
 app.use(express.static(__dirname, { dotfiles: 'allow' } ))
@@ -39,12 +38,6 @@ io.on('connect', session => {
 app.get('/sockets', (req, res) => {
   res.send('Sockets page')
 })
-
-app.post('/mqtt/test', (req, res) => {
-  mqttClient.sendMessage(req.body.message)
-  res.status(200).send(`${req.body.message} sent to broker`)
-})
-
 
 // function checkToken(token) {
 //   // if (token) return true

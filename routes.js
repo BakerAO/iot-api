@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken')
 const mysql = require('mysql')
 const bcrypt = require('bcrypt')
 const moment = require('moment')
+const mqttClient = require('./mqttClient')
 require('dotenv').config()
 const connection = mysql.createConnection({
   host: process.env.MYSQL_HOST,
@@ -367,5 +368,13 @@ function insertFlow(body, res) {
     }
   })
 }
+
+router.post('/mqtt', verifyToken, (req, res) => {
+  const clientId = req.verified_id
+  const topic = req.body.topic
+  const message = req.body.message
+  mqttClient.publish(`${clientId}/${topic}`, message)
+  res.status(200).send(`${clientId}/${topic}, ${message} sent to broker`)
+})
 
 module.exports = router
