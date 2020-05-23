@@ -7,7 +7,7 @@ client.on('connect', () => {
 })
 
 client.on('message', (topic, message) => {
-  console.log(topic.toString(), message.toString())
+  console.log('Message: ', topic.toString(), message.toString())
 })
 
 module.exports = client
