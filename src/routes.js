@@ -195,10 +195,9 @@ router.get('/water_flow', verifyToken, (req, res) => {
         device.id = rows[i].id
         device.alias = rows[i].alias
         const getWaterFlow = `
-          SELECT flow_rate, total_output, datetime
+          SELECT flow_rate, total_output, valve_status, datetime
           FROM water_flow
           WHERE device_id = ${device.id}
-          AND datetime BETWEEN DATE_SUB(NOW(), INTERVAL 24 HOUR) AND NOW()
           ORDER BY datetime DESC
         `
         connection.query(getWaterFlow, (error, records, magFields) => {
@@ -206,6 +205,42 @@ router.get('/water_flow', verifyToken, (req, res) => {
           else device.records = records
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
+router.post('/water_flow/shut_off', verifyToken, (req, res) => {
+  const getDevice = `
+    SELECT *
+    FROM devices
+    WHERE type = 'water_flow'
+    AND user_id = ${req.verified_id}
+    AND id = ${req.body.device_id}
+  `
+  connection.query(getDevice, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      if (rows.length < 1) {
+        res.status(402).send('No device found')
+      } else {
+        const getLatestStatus = `
+          SELECT flow_rate, total_output, valve_status, datetime
+          FROM water_flow
+          WHERE device_id = ${rows[0].id}
+          ORDER BY datetime DESC
+        `
+        connection.query(getLatestStatus, (error, records, recFields) => {
+          if (error) res.status(500)
+          else {
+            if (records.length && records[0].valve_status === 'open') {
+              const topic = `${req.verified_id}/water_flow/${req.body.device_id}`
+              const message = 'shut_off'
+              mqttClient.publish(topic, message)
+              res.status(200).send(`${topic}, ${message} sent to broker`)
+            }
+          }
         })
       }
     }
@@ -327,12 +362,14 @@ function insertFlow(body, res) {
       device_id,
       flow_rate,
       total_output,
+      valve_status,
       datetime
     )
     VALUES (
       ${parseInt(body.device_id)},
       ${parseFloat(body.flow_rate)},
       ${parseFloat(body.total_output)},
+      ${String(body.valve_status)},
       '${date}'
     )
   `
@@ -368,13 +405,5 @@ function insertFlow(body, res) {
     }
   })
 }
-
-router.post('/mqtt', verifyToken, (req, res) => {
-  const clientId = req.verified_id
-  const topic = req.body.topic
-  const message = req.body.message
-  mqttClient.publish(`${clientId}/${topic}`, message)
-  res.status(200).send(`${clientId}/${topic}, ${message} sent to broker`)
-})
 
 module.exports = router
