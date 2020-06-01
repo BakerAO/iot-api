@@ -25,5 +25,8 @@
     "mqtt": "^4.1.0",
     "mysql": "^2.18.1",
     "socket.io": "^2.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
   }
 }
