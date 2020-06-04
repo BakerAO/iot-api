@@ -369,7 +369,7 @@ function insertFlow(body, res) {
       ${parseInt(body.device_id)},
       ${parseFloat(body.flow_rate)},
       ${parseFloat(body.total_output)},
-      ${String(body.valve_status)},
+      '${String(body.valve_status)}',
       '${date}'
     )
   `
