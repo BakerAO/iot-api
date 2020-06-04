@@ -200,7 +200,7 @@ router.get('/water_flow', verifyToken, (req, res) => {
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
         `
-        connection.query(getWaterFlow, (error, records, magFields) => {
+        connection.query(getWaterFlow, (error, records, flowFields) => {
           if (error) res.status(500)
           else device.records = records
           devices.push(device)
