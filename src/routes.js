@@ -247,6 +247,42 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
   })
 })
 
+router.post('/water_flow/open', verifyToken, (req, res) => {
+  const getDevice = `
+    SELECT *
+    FROM devices
+    WHERE type = 'water_flow'
+    AND user_id = ${req.verified_id}
+    AND id = ${req.body.device_id}
+  `
+  connection.query(getDevice, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      if (rows.length < 1) {
+        res.status(402).send('No device found')
+      } else {
+        const getLatestStatus = `
+          SELECT flow_rate, total_output, valve_status, datetime
+          FROM water_flow
+          WHERE device_id = ${rows[0].id}
+          ORDER BY datetime DESC
+        `
+        connection.query(getLatestStatus, (error, records, recFields) => {
+          if (error) res.status(500)
+          else {
+            if (records.length && records[0].valve_status === 'closed') {
+              const topic = `${req.verified_id}/water_flow/${req.body.device_id}`
+              const message = 'open'
+              mqttClient.publish(topic, message)
+              res.status(200).send(`${topic}, ${message} sent to broker`)
+            }
+          }
+        })
+      }
+    }
+  })
+})
+
 router.post('/devices', (req, res) => {
   if (req.body.temperature !== undefined) {
     insertThermometer(req.body, res)
