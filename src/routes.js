@@ -307,7 +307,7 @@ function insertThermometer(body, res) {
     )
     VALUES (
       ${parseInt(body.device_id)},
-      ${parseFloat(body.battery)},
+      ${parseFloat(body.battery) || 0},
       ${parseFloat(body.temperature)},
       ${parseFloat(body.humidity)},
       '${date}'
@@ -357,7 +357,7 @@ function insertMagnet(body, res) {
     )
     VALUES (
       ${parseInt(body.device_id)},
-      ${parseFloat(body.battery)},
+      ${parseFloat(body.battery) || 0},
       ${parseInt(body.magnet)},
       '${date}'
     )
@@ -408,9 +408,9 @@ function insertFlow(body, res) {
     )
     VALUES (
       ${parseInt(body.device_id)},
-      ${parseFloat(body.temperature)},
-      ${parseFloat(body.flow_rate)},
-      ${parseFloat(body.total_output)},
+      ${parseFloat(body.battery) || 0},
+      ${parseFloat(body.flow_rate) || 0},
+      ${parseFloat(body.total_output) || 0},
       '${String(body.valve_status)}',
       '${date}'
     )
