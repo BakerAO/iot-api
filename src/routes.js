@@ -300,12 +300,14 @@ function insertThermometer(body, res) {
   const insertQuery = `
     INSERT INTO thermometers (
       device_id,
+      battery,
       temperature,
       humidity,
       datetime
     )
     VALUES (
       ${parseInt(body.device_id)},
+      ${parseFloat(body.battery)},
       ${parseFloat(body.temperature)},
       ${parseFloat(body.humidity)},
       '${date}'
@@ -349,11 +351,13 @@ function insertMagnet(body, res) {
   const insertQuery = `
     INSERT INTO magnets (
       device_id,
+      battery,
       status,
       datetime
     )
     VALUES (
       ${parseInt(body.device_id)},
+      ${parseFloat(body.battery)},
       ${parseInt(body.magnet)},
       '${date}'
     )
@@ -396,6 +400,7 @@ function insertFlow(body, res) {
   const insertQuery = `
     INSERT INTO water_flow (
       device_id,
+      battery,
       flow_rate,
       total_output,
       valve_status,
@@ -403,6 +408,7 @@ function insertFlow(body, res) {
     )
     VALUES (
       ${parseInt(body.device_id)},
+      ${parseFloat(body.temperature)},
       ${parseFloat(body.flow_rate)},
       ${parseFloat(body.total_output)},
       '${String(body.valve_status)}',
