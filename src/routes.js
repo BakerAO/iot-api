@@ -235,8 +235,8 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
           if (error) res.status(500)
           else {
             if (records.length && records[0].valve_status === 'open') {
-              const topic = `${req.verified_id}/water_flow/${req.body.device_id}`
-              const message = 'shut_off'
+              const topic = `${req.verified_id}/water_flow`
+              const message = `${req.body.device_id}-SHUT_OFF`
               mqttClient.publish(topic, message)
               res.status(200).send(`${topic}, ${message} sent to broker`)
             }
@@ -271,8 +271,8 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
           if (error) res.status(500)
           else {
             if (records.length && records[0].valve_status === 'closed') {
-              const topic = `${req.verified_id}/water_flow/${req.body.device_id}`
-              const message = 'open'
+              const topic = `${req.verified_id}/water_flow`
+              const message = `${req.body.device_id}-OPEN`
               mqttClient.publish(topic, message)
               res.status(200).send(`${topic}, ${message} sent to broker`)
             }
