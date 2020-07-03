@@ -195,7 +195,7 @@ router.get('/water_flow', verifyToken, (req, res) => {
         device.id = rows[i].id
         device.alias = rows[i].alias
         const getWaterFlow = `
-          SELECT flow_rate, total_output, valve_status, datetime
+          SELECT battery, flow_rate, total_output, valve_status, datetime
           FROM water_flow
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
