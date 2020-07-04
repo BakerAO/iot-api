@@ -162,7 +162,7 @@ router.get('/magnets', verifyToken, (req, res) => {
         device.id = rows[i].id
         device.alias = rows[i].alias
         const getMagnets = `
-          SELECT status, datetime
+          SELECT battery, status, datetime
           FROM magnets
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
@@ -348,46 +348,64 @@ function insertThermometer(body, res) {
 
 function insertMagnet(body, res) {
   const date = moment().format('YYYY-MM-DD HH:mm:ss')
-  const insertQuery = `
-    INSERT INTO magnets (
-      device_id,
-      battery,
-      status,
-      datetime
-    )
-    VALUES (
-      ${parseInt(body.device_id)},
-      ${parseFloat(body.battery) || 0},
-      ${parseInt(body.magnet)},
-      '${date}'
-    )
+  const checkStatus = `
+    SELECT status, datetime
+    FROM magnets
+    WHERE device_id = ${body.device_id}
+    ORDER BY datetime DESC
+    LIMIT 1
   `
-  connection.query(insertQuery, (err, rows, fields) => {
+  connection.query(checkStatus, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
-      const deviceRecords = `
-        SELECT datetime
-        FROM magnets
-        WHERE device_id = ${body.device_id}
-        ORDER BY datetime DESC
-        LIMIT 100
+      if (rows && rows[0]) {
+        if (rows[0].status === body.magnet) {
+          res.sendStatus(200)
+          return
+        }
+      }
+      const insertQuery = `
+        INSERT INTO magnets (
+          device_id,
+          battery,
+          status,
+          datetime
+        )
+        VALUES (
+          ${parseInt(body.device_id)},
+          ${parseFloat(body.battery) || 0},
+          ${parseInt(body.magnet)},
+          '${date}'
+        )
       `
-      connection.query(deviceRecords, async (err, rows, fields) => {
+      connection.query(insertQuery, (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
-          let dateTimes = ''
-          for (let i = 0; i < rows.length; i++) {
-            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-          }
-          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-          const deleteDevices = `
-            DELETE FROM magnets
+          const deviceRecords = `
+            SELECT datetime
+            FROM magnets
             WHERE device_id = ${body.device_id}
-            AND datetime NOT IN (${dateTimes})
+            ORDER BY datetime DESC
+            LIMIT 100
           `
-          connection.query(deleteDevices, (err, rows, fields) => {
+          connection.query(deviceRecords, async (err, rows, fields) => {
             if (err) res.status(500).send(err)
-            else res.sendStatus(200)
+            else {
+              let dateTimes = ''
+              for (let i = 0; i < rows.length; i++) {
+                dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+              }
+              if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+              const deleteDevices = `
+                DELETE FROM magnets
+                WHERE device_id = ${body.device_id}
+                AND datetime NOT IN (${dateTimes})
+              `
+              connection.query(deleteDevices, (err, rows, fields) => {
+                if (err) res.status(500).send(err)
+                else res.sendStatus(200)
+              })
+            }
           })
         }
       })
