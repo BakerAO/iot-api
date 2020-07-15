@@ -35,7 +35,7 @@ router.get('/', (req, res) => {
   `)
 })
 
-router.post('/register', async (req, res) => {
+router.post('/register/account', async (req, res) => {
   const emailExists = `
     SELECT *
     FROM users
@@ -283,6 +283,41 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
   })
 })
 
+router.post('/register/device', verifyToken, (req, res) => {
+  const deviceQuery = `
+    SELECT id
+    FROM devices
+    WHERE id = ${parseInt(req.body.id)}
+  `
+  connection.query(deviceQuery, (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else if (rows.length > 0) {
+      res.status(400).send('Device ID already exists')
+    } else {
+      const date = moment().format('YYYY-MM-DD HH:mm:ss')
+      const insertQuery = `
+        INSERT INTO devices (
+          id,
+          user_id,
+          alias,
+          type,
+          datetime
+        ) VALUES (
+          ${parseInt(req.body.id)},
+          ${parseInt(req.verified_id)},
+          ${sanitize(req.body.alias)},
+          ${sanitize(req.body.type)},
+          '${date}'
+        )
+      `
+      connection.query(insertQuery, (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else res.sendStatus(200)
+      })
+    }
+  })
+})
+
 router.post('/devices', (req, res) => {
   if (req.body.temperature !== undefined) {
     insertThermometer(req.body, res)
@@ -446,6 +481,10 @@ function insertFlow(body, res) {
       })
     }
   })
+}
+
+function sanitize(text) {
+  return text.replace(/[a-zA-Z0-9 ]/g, '')
 }
 
 module.exports = router
