@@ -113,6 +113,10 @@ router.get('/devices', verifyToken, (req, res) => {
   })
 })
 
+router.get('/devices/types', verifyToken, (req, res) => {
+  res.send(['thermometer', 'water_flow', 'magnet'])
+})
+
 router.get('/thermometers', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
@@ -290,7 +294,7 @@ router.post('/register/device', verifyToken, (req, res) => {
     WHERE id = ${parseInt(req.body.id)}
   `
   connection.query(deviceQuery, (err, rows, fields) => {
-    if (err) res.status(500).send(err)
+    if (err) res.status(400).send(err)
     else if (rows.length > 0) {
       res.status(400).send('Device ID already exists')
     } else {
@@ -301,17 +305,17 @@ router.post('/register/device', verifyToken, (req, res) => {
           user_id,
           alias,
           type,
-          datetime
+          created
         ) VALUES (
           ${parseInt(req.body.id)},
           ${parseInt(req.verified_id)},
-          ${sanitize(req.body.alias)},
-          ${sanitize(req.body.type)},
+          '${sanitize(req.body.alias)}',
+          '${sanitize(req.body.type)}',
           '${date}'
         )
       `
       connection.query(insertQuery, (err, rows, fields) => {
-        if (err) res.status(500).send(err)
+        if (err) res.status(400).send(err)
         else res.sendStatus(200)
       })
     }
@@ -502,7 +506,7 @@ function insertFlow(body, res) {
 }
 
 function sanitize(text) {
-  return text.replace(/[a-zA-Z0-9 ]/g, '')
+  return text.replace(/[^a-zA-Z0-9 ]/g, '')
 }
 
 module.exports = router
