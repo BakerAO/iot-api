@@ -35,34 +35,7 @@ router.get('/', (req, res) => {
   `)
 })
 
-router.post('/register/account', async (req, res) => {
-  const emailExists = `
-    SELECT *
-    FROM users
-    WHERE email = '${req.body.email}'
-  `
-  connection.query(emailExists, async (err, rows, fields) => {
-    if (err) res.status(500).send(err)
-    else if (rows.length > 0) res.status(200).send('emailExists')
-    else {
-      bcrypt.genSalt(10, async function (err, salt) {
-        bcrypt.hash(req.body.password, salt, function (err, hash) {
-          const date = moment().format('YYYY-MM-DD HH:mm:ss')
-          const insertUser = `
-            INSERT INTO users (email, password, created)
-            VALUES ('${req.body.email}', '${hash}', '${date}')
-          `
-          connection.query(insertUser, (err, rows, fields) => {
-            if (err) res.status(500).send(err)
-            else res.sendStatus(200)
-          })
-        })
-      })
-    }
-  })
-})
-
-router.post('/login', (req, res) => {
+router.post('/account/login', (req, res) => {
   const getUserEmail = `
     SELECT *
     FROM users
@@ -91,6 +64,63 @@ router.post('/login', (req, res) => {
   })
 })
 
+router.post('/account/register', async (req, res) => {
+  const emailExists = `
+    SELECT *
+    FROM users
+    WHERE email = '${req.body.email}'
+  `
+  connection.query(emailExists, async (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else if (rows.length > 0) res.status(200).send('emailExists')
+    else {
+      bcrypt.genSalt(10, async function (err, salt) {
+        bcrypt.hash(req.body.password, salt, function (err, hash) {
+          const date = moment().format('YYYY-MM-DD HH:mm:ss')
+          const insertUser = `
+            INSERT INTO users (email, password, created)
+            VALUES ('${req.body.email}', '${hash}', '${date}')
+          `
+          connection.query(insertUser, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        })
+      })
+    }
+  })
+})
+
+router.post('/account/password', verifyToken, async (req, res) => {
+  const userQuery = `
+    SELECT password
+    FROM users
+    WHERE id = '${req.verified_id}'
+  `
+  connection.query(userQuery, async (err, rows, fields) => {
+    if (err) res.status(400).send(err)
+    else {
+      const validPassword = await bcrypt.compare(req.body.oldPassword, rows[0].password)
+      if (!validPassword) res.status(401).send('Current password is incorrect')
+      else {
+        bcrypt.genSalt(10, async function (err, salt) {
+          bcrypt.hash(req.body.newPassword, salt, function (err, hash) {
+            const updateQuery = `
+              UPDATE users
+              SET password = '${hash}'
+              WHERE id = ${req.verified_id}
+            `
+            connection.query(updateQuery, (err, rows, fields) => {
+              if (err) res.status(500).send(err)
+              else res.sendStatus(200)
+            })
+          })
+        })
+      }
+    }
+  })
+})
+
 router.get('/devices', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
@@ -109,6 +139,53 @@ router.get('/devices', verifyToken, (req, res) => {
         devices.push(device)
         if (i === rows.length - 1) res.json(devices)
       }
+    }
+  })
+})
+
+router.post('/devices', (req, res) => {
+  if (req.body.temperature !== undefined) {
+    insertThermometer(req.body, res)
+  } else if (req.body.magnet !== undefined) {
+    insertMagnet(req.body, res)
+  } else if (req.body.flow_rate !== undefined) {
+    insertFlow(req.body, res)
+  } else {
+    res.sendStatus(402)
+  }
+})
+
+router.post('/devices/register', verifyToken, (req, res) => {
+  const deviceQuery = `
+    SELECT id
+    FROM devices
+    WHERE id = ${parseInt(req.body.id)}
+  `
+  connection.query(deviceQuery, (err, rows, fields) => {
+    if (err) res.status(400).send(err)
+    else if (rows.length > 0) {
+      res.status(400).send('Device ID already exists')
+    } else {
+      const date = moment().format('YYYY-MM-DD HH:mm:ss')
+      const insertQuery = `
+        INSERT INTO devices (
+          id,
+          user_id,
+          alias,
+          type,
+          created
+        ) VALUES (
+          ${parseInt(req.body.id)},
+          ${parseInt(req.verified_id)},
+          '${sanitize(req.body.alias)}',
+          '${sanitize(req.body.type)}',
+          '${date}'
+        )
+      `
+      connection.query(insertQuery, (err, rows, fields) => {
+        if (err) res.status(400).send(err)
+        else res.sendStatus(200)
+      })
     }
   })
 })
@@ -285,53 +362,6 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
       }
     }
   })
-})
-
-router.post('/register/device', verifyToken, (req, res) => {
-  const deviceQuery = `
-    SELECT id
-    FROM devices
-    WHERE id = ${parseInt(req.body.id)}
-  `
-  connection.query(deviceQuery, (err, rows, fields) => {
-    if (err) res.status(400).send(err)
-    else if (rows.length > 0) {
-      res.status(400).send('Device ID already exists')
-    } else {
-      const date = moment().format('YYYY-MM-DD HH:mm:ss')
-      const insertQuery = `
-        INSERT INTO devices (
-          id,
-          user_id,
-          alias,
-          type,
-          created
-        ) VALUES (
-          ${parseInt(req.body.id)},
-          ${parseInt(req.verified_id)},
-          '${sanitize(req.body.alias)}',
-          '${sanitize(req.body.type)}',
-          '${date}'
-        )
-      `
-      connection.query(insertQuery, (err, rows, fields) => {
-        if (err) res.status(400).send(err)
-        else res.sendStatus(200)
-      })
-    }
-  })
-})
-
-router.post('/devices', (req, res) => {
-  if (req.body.temperature !== undefined) {
-    insertThermometer(req.body, res)
-  } else if (req.body.magnet !== undefined) {
-    insertMagnet(req.body, res)
-  } else if (req.body.flow_rate !== undefined) {
-    insertFlow(req.body, res)
-  } else {
-    res.sendStatus(402)
-  }
 })
 
 function insertThermometer(body, res) {
