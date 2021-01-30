@@ -35,6 +35,10 @@ router.get('/', (req, res) => {
   `)
 })
 
+router.get('/account/verify_token', verifyToken, async (req, res) => {
+  res.sendStatus(200)
+})
+
 router.post('/account/login', (req, res) => {
   const getUserEmail = `
     SELECT *

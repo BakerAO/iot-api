@@ -1,5 +1,4 @@
 const express = require('express')
-const socketio = require('socket.io')
 const routes = require('./routes')
 
 const app = express()
@@ -12,49 +11,6 @@ app.use(function(req, res, next) {
   next()
 })
 app.use('/', routes)
-const server = app.listen(8081, () =>  {
+app.listen(8081, () =>  {
   console.log('Server Started: http://localhost:8081')
 })
-
-const io = socketio(server)
-let sessions = []
-
-io.on('connect', session => {
-  sessions.push(session.id)
-
-  session.on('toServer', data => {
-    console.log(data)
-  })
-
-  session.on('fromServer', data => {
-    console.log(data)
-  })
-
-  session.on('disconnect', () => {
-    sessions = sessions.filter(s => s !== session.id)
-  })
-})
-
-app.get('/sockets', (req, res) => {
-  res.send('Sockets page')
-})
-
-// function checkToken(token) {
-//   // if (token) return true
-//   return true
-// }
-
-// io.of((name, query, next) => {
-//   next(null, checkToken(query.token))
-// }).on('connect', session => {
-//   sessions.push(session.id)
-
-//   session.on('toServer', data => {
-//     console.log('data: ', data)
-//   })
-
-//   session.on('disconnect', () => {
-//     sessions = sessions.filter(s => s !== session.id)
-//   })
-// })
-
