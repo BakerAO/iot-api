@@ -154,6 +154,8 @@ router.post('/devices', (req, res) => {
     insertMagnet(req.body, res)
   } else if (req.body.flow_rate !== undefined) {
     insertFlow(req.body, res)
+  } else if (req.body.latitude !== undefined) {
+    insertTracker(req.body, res)
   } else {
     res.sendStatus(402)
   }
@@ -195,7 +197,7 @@ router.post('/devices/register', verifyToken, (req, res) => {
 })
 
 router.get('/devices/types', verifyToken, (req, res) => {
-  res.send(['thermometer', 'water_flow', 'magnet'])
+  res.send(['thermometer', 'water_flow', 'magnet', 'tracker'])
 })
 
 router.get('/thermometers', verifyToken, (req, res) => {
@@ -286,6 +288,38 @@ router.get('/water_flow', verifyToken, (req, res) => {
           ORDER BY datetime DESC
         `
         connection.query(getWaterFlow, (error, records, flowFields) => {
+          if (error) res.status(500)
+          else device.records = records
+          devices.push(device)
+          if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
+router.get('/trackers', verifyToken, (req, res) => {
+  const getDevices = `
+    SELECT *
+    FROM devices
+    WHERE type = 'tracker'
+    AND user_id = ${req.verified_id}
+  `
+  connection.query(getDevices, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        const getTrackerData = `
+          SELECT battery, latitude, longitude, altitude, satellites, hdop, datetime
+          FROM trackers
+          WHERE device_id = ${device.id}
+          ORDER BY datetime DESC
+        `
+        connection.query(getTrackerData, (error, records, flowFields) => {
           if (error) res.status(500)
           else device.records = records
           devices.push(device)
@@ -526,6 +560,63 @@ function insertFlow(body, res) {
           if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
           const deleteDevices = `
             DELETE FROM water_flow
+            WHERE device_id = ${body.device_id}
+            AND datetime NOT IN (${dateTimes})
+          `
+          connection.query(deleteDevices, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        }
+      })
+    }
+  })
+}
+
+function insertTracker(body, res) {
+  const date = moment().format('YYYY-MM-DD HH:mm:ss')
+  const insertQuery = `
+    INSERT INTO trackers (
+      device_id,
+      battery,
+      latitude,
+      longitude,
+      altitude,
+      satellites,
+      hdop,
+      datetime
+    )
+    VALUES (
+      ${parseInt(body.device_id)},
+      ${parseFloat(body.battery) || 0},
+      ${parseFloat(body.latitude)},
+      ${parseFloat(body.longitude)},
+      ${parseFloat(body.altitude)},
+      ${parseInt(body.satellites)},
+      ${parseFloat(body.hdop)},
+      '${date}'
+    )
+  `
+  connection.query(insertQuery, (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else {
+      const deviceRecords = `
+        SELECT datetime
+        FROM trackers
+        WHERE device_id = ${body.device_id}
+        ORDER BY datetime DESC
+        LIMIT 100
+      `
+      connection.query(deviceRecords, async (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else {
+          let dateTimes = ''
+          for (let i = 0; i < rows.length; i++) {
+            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+          }
+          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+          const deleteDevices = `
+            DELETE FROM trackers
             WHERE device_id = ${body.device_id}
             AND datetime NOT IN (${dateTimes})
           `
