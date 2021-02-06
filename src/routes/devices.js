@@ -1,17 +1,12 @@
 const router = require('express').Router()
 const jwt = require('jsonwebtoken')
-const mysql = require('mysql')
-const bcrypt = require('bcrypt')
 const moment = require('moment')
-const mqttClient = require('./mqttClient')
-require('dotenv').config()
-const connection = mysql.createConnection({
-  host: process.env.MYSQL_HOST,
-  port: process.env.MYSQL_PORT,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: 'iot'
-})
+const mqttClient = require('../mqttClient')
+const db = require('../dbConnection')
+
+function sanitize(text) {
+  return text.replace(/[^a-zA-Z0-9 ]/g, '')
+}
 
 function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
@@ -25,113 +20,13 @@ function verifyToken(req, res, next) {
   })
 }
 
-router.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <body>
-        <h4>hi</h4>
-      </body>
-    </html>
-  `)
-})
-
-router.get('/account/verify_token', verifyToken, async (req, res) => {
-  res.sendStatus(200)
-})
-
-router.post('/account/login', (req, res) => {
-  const getUserEmail = `
-    SELECT *
-    FROM users
-    WHERE email = '${req.body.email}'
-  `
-  connection.query(getUserEmail, async (err, rows, fields) => {
-    if (err) res.status(400).send(err)
-    else {
-      const validPassword = await bcrypt.compare(req.body.password, rows[0].password)
-      if (!validPassword) res.sendStatus(401)
-      else {
-        const user = {
-          id: rows[0].id,
-          email: rows[0].email
-        }
-        jwt.sign(
-          { user: user },
-          process.env.TOKEN_SECRET,
-          { expiresIn: '7 days' },
-          (err, token) => {
-            res.json({ token: token })
-          }
-        )
-      }
-    }
-  })
-})
-
-router.post('/account/register', async (req, res) => {
-  const emailExists = `
-    SELECT *
-    FROM users
-    WHERE email = '${req.body.email}'
-  `
-  connection.query(emailExists, async (err, rows, fields) => {
-    if (err) res.status(500).send(err)
-    else if (rows.length > 0) res.status(200).send('emailExists')
-    else {
-      bcrypt.genSalt(10, async function (err, salt) {
-        bcrypt.hash(req.body.password, salt, function (err, hash) {
-          const date = moment().format('YYYY-MM-DD HH:mm:ss')
-          const insertUser = `
-            INSERT INTO users (email, password, created)
-            VALUES ('${req.body.email}', '${hash}', '${date}')
-          `
-          connection.query(insertUser, (err, rows, fields) => {
-            if (err) res.status(500).send(err)
-            else res.sendStatus(200)
-          })
-        })
-      })
-    }
-  })
-})
-
-router.post('/account/password', verifyToken, async (req, res) => {
-  const userQuery = `
-    SELECT password
-    FROM users
-    WHERE id = '${req.verified_id}'
-  `
-  connection.query(userQuery, async (err, rows, fields) => {
-    if (err) res.status(400).send(err)
-    else {
-      const validPassword = await bcrypt.compare(req.body.oldPassword, rows[0].password)
-      if (!validPassword) res.status(401).send('Current password is incorrect')
-      else {
-        bcrypt.genSalt(10, async function (err, salt) {
-          bcrypt.hash(req.body.newPassword, salt, function (err, hash) {
-            const updateQuery = `
-              UPDATE users
-              SET password = '${hash}'
-              WHERE id = ${req.verified_id}
-            `
-            connection.query(updateQuery, (err, rows, fields) => {
-              if (err) res.status(500).send(err)
-              else res.sendStatus(200)
-            })
-          })
-        })
-      }
-    }
-  })
-})
-
 router.get('/devices', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
     FROM devices
     WHERE user_id = ${req.verified_id}
   `
-  connection.query(getDevices, (err, rows, fields) => {
+  db.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       let devices = []
@@ -147,18 +42,8 @@ router.get('/devices', verifyToken, (req, res) => {
   })
 })
 
-router.post('/devices', (req, res) => {
-  if (req.body.temperature !== undefined) {
-    insertThermometer(req.body, res)
-  } else if (req.body.magnet !== undefined) {
-    insertMagnet(req.body, res)
-  } else if (req.body.flow_rate !== undefined) {
-    insertFlow(req.body, res)
-  } else if (req.body.latitude !== undefined) {
-    insertTracker(req.body, res)
-  } else {
-    res.sendStatus(402)
-  }
+router.get('/devices/types', verifyToken, (req, res) => {
+  res.send(['thermometer', 'water_flow', 'magnet', 'tracker'])
 })
 
 router.post('/devices/register', verifyToken, (req, res) => {
@@ -167,7 +52,7 @@ router.post('/devices/register', verifyToken, (req, res) => {
     FROM devices
     WHERE id = ${parseInt(req.body.id)}
   `
-  connection.query(deviceQuery, (err, rows, fields) => {
+  db.query(deviceQuery, (err, rows, fields) => {
     if (err) res.status(400).send(err)
     else if (rows.length > 0) {
       res.status(400).send('Device ID already exists')
@@ -188,7 +73,7 @@ router.post('/devices/register', verifyToken, (req, res) => {
           '${date}'
         )
       `
-      connection.query(insertQuery, (err, rows, fields) => {
+      db.query(insertQuery, (err, rows, fields) => {
         if (err) res.status(400).send(err)
         else res.sendStatus(200)
       })
@@ -196,8 +81,18 @@ router.post('/devices/register', verifyToken, (req, res) => {
   })
 })
 
-router.get('/devices/types', verifyToken, (req, res) => {
-  res.send(['thermometer', 'water_flow', 'magnet', 'tracker'])
+router.post('/devices', (req, res) => {
+  if (req.body.temperature !== undefined) {
+    insertThermometer(req.body, res)
+  } else if (req.body.magnet !== undefined) {
+    insertMagnet(req.body, res)
+  } else if (req.body.flow_rate !== undefined) {
+    insertFlow(req.body, res)
+  } else if (req.body.latitude !== undefined) {
+    insertTracker(req.body, res)
+  } else {
+    res.sendStatus(402)
+  }
 })
 
 router.get('/thermometers', verifyToken, (req, res) => {
@@ -207,7 +102,7 @@ router.get('/thermometers', verifyToken, (req, res) => {
     WHERE type = 'thermometer'
     AND user_id = ${req.verified_id}
   `
-  connection.query(getDevices, (err, rows, fields) => {
+  db.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       let devices = []
@@ -222,7 +117,7 @@ router.get('/thermometers', verifyToken, (req, res) => {
           ORDER BY datetime DESC
           LIMIT 10
         `
-        connection.query(getTemperatures, (tempErr, tempRows, tempFields) => {
+        db.query(getTemperatures, (tempErr, tempRows, tempFields) => {
           if (tempErr) res.status(500)
           else device.temperatures = tempRows
           devices.push(device)
@@ -240,7 +135,7 @@ router.get('/magnets', verifyToken, (req, res) => {
     WHERE type = 'magnet'
     AND user_id = ${req.verified_id}
   `
-  connection.query(getDevices, (err, rows, fields) => {
+  db.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       let devices = []
@@ -255,41 +150,9 @@ router.get('/magnets', verifyToken, (req, res) => {
           ORDER BY datetime DESC
           LIMIT 20
         `
-        connection.query(getMagnets, (error, records, magFields) => {
+        db.query(getMagnets, (error, records, magFields) => {
           if (error) res.status(500)
           else device.statuses = records
-          devices.push(device)
-          if (i === rows.length - 1) res.json(devices)
-        })
-      }
-    }
-  })
-})
-
-router.get('/water_flow', verifyToken, (req, res) => {
-  const getDevices = `
-    SELECT *
-    FROM devices
-    WHERE type = 'water_flow'
-    AND user_id = ${req.verified_id}
-  `
-  connection.query(getDevices, (err, rows, fields) => {
-    if (err) res.status(500)
-    else {
-      let devices = []
-      for (let i = 0; i < rows.length; i++) {
-        let device = {}
-        device.id = rows[i].id
-        device.alias = rows[i].alias
-        const getWaterFlow = `
-          SELECT battery, flow_rate, total_output, valve_status, datetime
-          FROM water_flow
-          WHERE device_id = ${device.id}
-          ORDER BY datetime DESC
-        `
-        connection.query(getWaterFlow, (error, records, flowFields) => {
-          if (error) res.status(500)
-          else device.records = records
           devices.push(device)
           if (i === rows.length - 1) res.json(devices)
         })
@@ -305,7 +168,7 @@ router.get('/trackers', verifyToken, (req, res) => {
     WHERE type = 'tracker'
     AND user_id = ${req.verified_id}
   `
-  connection.query(getDevices, (err, rows, fields) => {
+  db.query(getDevices, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       let devices = []
@@ -319,7 +182,39 @@ router.get('/trackers', verifyToken, (req, res) => {
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
         `
-        connection.query(getTrackerData, (error, records, flowFields) => {
+        db.query(getTrackerData, (error, records, flowFields) => {
+          if (error) res.status(500)
+          else device.records = records
+          devices.push(device)
+          if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
+router.get('/water_flow', verifyToken, (req, res) => {
+  const getDevices = `
+    SELECT *
+    FROM devices
+    WHERE type = 'water_flow'
+    AND user_id = ${req.verified_id}
+  `
+  db.query(getDevices, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        const getWaterFlow = `
+          SELECT battery, flow_rate, total_output, valve_status, datetime
+          FROM water_flow
+          WHERE device_id = ${device.id}
+          ORDER BY datetime DESC
+        `
+        db.query(getWaterFlow, (error, records, flowFields) => {
           if (error) res.status(500)
           else device.records = records
           devices.push(device)
@@ -338,7 +233,7 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
     AND user_id = ${req.verified_id}
     AND id = ${req.body.device_id}
   `
-  connection.query(getDevice, (err, rows, fields) => {
+  db.query(getDevice, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       if (rows.length < 1) {
@@ -350,7 +245,7 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
           WHERE device_id = ${rows[0].id}
           ORDER BY datetime DESC
         `
-        connection.query(getLatestStatus, (error, records, recFields) => {
+        db.query(getLatestStatus, (error, records, recFields) => {
           if (error) res.status(500)
           else {
             if (records.length && records[0].valve_status === 'open') {
@@ -374,7 +269,7 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
     AND user_id = ${req.verified_id}
     AND id = ${req.body.device_id}
   `
-  connection.query(getDevice, (err, rows, fields) => {
+  db.query(getDevice, (err, rows, fields) => {
     if (err) res.status(500)
     else {
       if (rows.length < 1) {
@@ -386,7 +281,7 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
           WHERE device_id = ${rows[0].id}
           ORDER BY datetime DESC
         `
-        connection.query(getLatestStatus, (error, records, recFields) => {
+        db.query(getLatestStatus, (error, records, recFields) => {
           if (error) res.status(500)
           else {
             if (records.length && records[0].valve_status === 'closed') {
@@ -420,7 +315,7 @@ function insertThermometer(body, res) {
       '${date}'
     )
   `
-  connection.query(insertQuery, (err, rows, fields) => {
+  db.query(insertQuery, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
       const deviceRecords = `
@@ -430,7 +325,7 @@ function insertThermometer(body, res) {
         ORDER BY datetime DESC
         LIMIT 100
       `
-      connection.query(deviceRecords, async (err, rows, fields) => {
+      db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
           let dateTimes = ''
@@ -443,7 +338,7 @@ function insertThermometer(body, res) {
             WHERE device_id = ${body.device_id}
             AND datetime NOT IN (${dateTimes})
           `
-          connection.query(deleteDevices, (err, rows, fields) => {
+          db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
           })
@@ -462,7 +357,7 @@ function insertMagnet(body, res) {
     ORDER BY datetime DESC
     LIMIT 1
   `
-  connection.query(checkStatus, (err, rows, fields) => {
+  db.query(checkStatus, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
       if (rows && rows[0]) {
@@ -485,7 +380,7 @@ function insertMagnet(body, res) {
           '${date}'
         )
       `
-      connection.query(insertQuery, (err, rows, fields) => {
+      db.query(insertQuery, (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
           const deviceRecords = `
@@ -495,7 +390,7 @@ function insertMagnet(body, res) {
             ORDER BY datetime DESC
             LIMIT 100
           `
-          connection.query(deviceRecords, async (err, rows, fields) => {
+          db.query(deviceRecords, async (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else {
               let dateTimes = ''
@@ -508,7 +403,7 @@ function insertMagnet(body, res) {
                 WHERE device_id = ${body.device_id}
                 AND datetime NOT IN (${dateTimes})
               `
-              connection.query(deleteDevices, (err, rows, fields) => {
+              db.query(deleteDevices, (err, rows, fields) => {
                 if (err) res.status(500).send(err)
                 else res.sendStatus(200)
               })
@@ -540,7 +435,7 @@ function insertFlow(body, res) {
       '${date}'
     )
   `
-  connection.query(insertQuery, (err, rows, fields) => {
+  db.query(insertQuery, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
       const deviceRecords = `
@@ -550,7 +445,7 @@ function insertFlow(body, res) {
         ORDER BY datetime DESC
         LIMIT 100
       `
-      connection.query(deviceRecords, async (err, rows, fields) => {
+      db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
           let dateTimes = ''
@@ -563,7 +458,7 @@ function insertFlow(body, res) {
             WHERE device_id = ${body.device_id}
             AND datetime NOT IN (${dateTimes})
           `
-          connection.query(deleteDevices, (err, rows, fields) => {
+          db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
           })
@@ -597,7 +492,7 @@ function insertTracker(body, res) {
       '${date}'
     )
   `
-  connection.query(insertQuery, (err, rows, fields) => {
+  db.query(insertQuery, (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else {
       const deviceRecords = `
@@ -607,7 +502,7 @@ function insertTracker(body, res) {
         ORDER BY datetime DESC
         LIMIT 100
       `
-      connection.query(deviceRecords, async (err, rows, fields) => {
+      db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
           let dateTimes = ''
@@ -620,7 +515,7 @@ function insertTracker(body, res) {
             WHERE device_id = ${body.device_id}
             AND datetime NOT IN (${dateTimes})
           `
-          connection.query(deleteDevices, (err, rows, fields) => {
+          db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
           })
@@ -628,10 +523,6 @@ function insertTracker(body, res) {
       })
     }
   })
-}
-
-function sanitize(text) {
-  return text.replace(/[^a-zA-Z0-9 ]/g, '')
 }
 
 module.exports = router
