@@ -182,7 +182,7 @@ router.get('/trackers', verifyToken, (req, res) => {
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
         `
-        db.query(getTrackerData, (error, records, flowFields) => {
+        db.query(getTrackerData, (error, records, trackerFields) => {
           if (error) res.status(500)
           else device.records = records
           devices.push(device)
