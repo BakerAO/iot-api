@@ -209,7 +209,14 @@ router.get('/water_flow', verifyToken, (req, res) => {
         device.id = rows[i].id
         device.alias = rows[i].alias
         const getWaterFlow = `
-          SELECT battery, flow_rate, total_output, valve_status, datetime
+          SELECT
+            battery,
+            flow_rate,
+            total_output,
+            valve_status,
+            datetime,
+            latitude,
+            longitude
           FROM water_flow
           WHERE device_id = ${device.id}
           ORDER BY datetime DESC
@@ -424,7 +431,12 @@ function insertFlow(body, res) {
       flow_rate,
       total_output,
       valve_status,
-      datetime
+      datetime,
+      latitude,
+      longitude,
+      altitude,
+      satellites,
+      hdop
     )
     VALUES (
       ${parseInt(body.device_id)},
@@ -432,7 +444,12 @@ function insertFlow(body, res) {
       ${parseFloat(body.flow_rate) || 0},
       ${parseFloat(body.total_output) || 0},
       '${String(body.valve_status)}',
-      '${date}'
+      '${date}',
+      ${parseFloat(body.latitude)},
+      ${parseFloat(body.longitude)},
+      ${parseFloat(body.altitude)},
+      ${parseInt(body.satellites)},
+      ${parseFloat(body.hdop)}
     )
   `
   db.query(insertQuery, (err, rows, fields) => {
