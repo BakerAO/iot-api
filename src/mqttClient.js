@@ -1,5 +1,5 @@
 const mqtt = require('mqtt')
-const client = mqtt.connect('mqtt://broker.innov8.host')
+const client = mqtt.connect('mqtt://10.0.0.5')
 
 client.on('connect', () => {
   client.subscribe('api')
