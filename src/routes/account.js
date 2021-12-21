@@ -21,6 +21,13 @@ function verifyToken(req, res, next) {
   })
 }
 
+router.get('/testdb', async (req, res) => {
+  db.query('select * from users', async (err, rows) => {
+    if (err) res.status(400).send(err)
+    else res.send(rows)
+  })
+})
+
 router.get('/account/verify_token', verifyToken, async (req, res) => {
   res.sendStatus(200)
 })
