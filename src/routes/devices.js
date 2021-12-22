@@ -82,12 +82,12 @@ router.post('/devices/register', verifyToken, (req, res) => {
 })
 
 router.post('/devices', (req, res) => {
-  if (req.body.temperature !== undefined) {
+  if (req.body.flow_rate !== undefined) {
+    insertFlow(req.body, res)
+  } else if (req.body.temperature !== undefined) {
     insertThermometer(req.body, res)
   } else if (req.body.magnet !== undefined) {
     insertMagnet(req.body, res)
-  } else if (req.body.flow_rate !== undefined) {
-    insertFlow(req.body, res)
   } else if (req.body.latitude !== undefined) {
     insertTracker(req.body, res)
   } else {
@@ -309,17 +309,17 @@ function insertThermometer(body, res) {
   const insertQuery = `
     INSERT INTO thermometers (
       device_id,
+      datetime,
       battery,
       temperature,
-      humidity,
-      datetime
+      humidity
     )
     VALUES (
       ${parseInt(body.device_id)},
+      '${date}',
       ${parseFloat(body.battery) || 0},
       ${parseFloat(body.temperature)},
-      ${parseFloat(body.humidity)},
-      '${date}'
+      ${parseFloat(body.humidity)}
     )
   `
   db.query(insertQuery, (err, rows, fields) => {
@@ -335,16 +335,7 @@ function insertThermometer(body, res) {
       db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
-          let dateTimes = ''
-          for (let i = 0; i < rows.length; i++) {
-            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-          }
-          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-          const deleteDevices = `
-            DELETE FROM thermometers
-            WHERE device_id = ${body.device_id}
-            AND datetime NOT IN (${dateTimes})
-          `
+          const deleteDevices = deleteQuery('thermometers', rows, body.device_id)
           db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
@@ -376,15 +367,15 @@ function insertMagnet(body, res) {
       const insertQuery = `
         INSERT INTO magnets (
           device_id,
+          datetime,
           battery,
-          status,
-          datetime
+          status
         )
         VALUES (
           ${parseInt(body.device_id)},
+          '${date}',
           ${parseFloat(body.battery) || 0},
-          ${parseInt(body.magnet)},
-          '${date}'
+          ${parseInt(body.magnet)}
         )
       `
       db.query(insertQuery, (err, rows, fields) => {
@@ -400,16 +391,7 @@ function insertMagnet(body, res) {
           db.query(deviceRecords, async (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else {
-              let dateTimes = ''
-              for (let i = 0; i < rows.length; i++) {
-                dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-              }
-              if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-              const deleteDevices = `
-                DELETE FROM magnets
-                WHERE device_id = ${body.device_id}
-                AND datetime NOT IN (${dateTimes})
-              `
+              const deleteDevices = deleteQuery('magnets', rows, body.device_id)
               db.query(deleteDevices, (err, rows, fields) => {
                 if (err) res.status(500).send(err)
                 else res.sendStatus(200)
@@ -427,11 +409,11 @@ function insertFlow(body, res) {
   const insertQuery = `
     INSERT INTO water_flow (
       device_id,
+      datetime,
       battery,
       flow_rate,
       total_output,
       valve_status,
-      datetime,
       latitude,
       longitude,
       altitude,
@@ -440,11 +422,11 @@ function insertFlow(body, res) {
     )
     VALUES (
       ${parseInt(body.device_id)},
+      '${date}',
       ${parseFloat(body.battery) || 0},
       ${parseFloat(body.flow_rate) || 0},
       ${parseFloat(body.total_output) || 0},
       '${String(body.valve_status)}',
-      '${date}',
       ${parseFloat(body.latitude)},
       ${parseFloat(body.longitude)},
       ${parseFloat(body.altitude)},
@@ -465,16 +447,7 @@ function insertFlow(body, res) {
       db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
-          let dateTimes = ''
-          for (let i = 0; i < rows.length; i++) {
-            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-          }
-          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-          const deleteDevices = `
-            DELETE FROM water_flow
-            WHERE device_id = ${body.device_id}
-            AND datetime NOT IN (${dateTimes})
-          `
+          const deleteDevices = deleteQuery('water_flow', rows, body.device_id)
           db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
@@ -490,23 +463,23 @@ function insertTracker(body, res) {
   const insertQuery = `
     INSERT INTO trackers (
       device_id,
+      datetime,
       battery,
       latitude,
       longitude,
       altitude,
       satellites,
-      hdop,
-      datetime
+      hdop
     )
     VALUES (
       ${parseInt(body.device_id)},
+      '${date}',
       ${parseFloat(body.battery) || 0},
       ${parseFloat(body.latitude)},
       ${parseFloat(body.longitude)},
       ${parseFloat(body.altitude)},
       ${parseInt(body.satellites)},
-      ${parseFloat(body.hdop)},
-      '${date}'
+      ${parseFloat(body.hdop)}
     )
   `
   db.query(insertQuery, (err, rows, fields) => {
@@ -522,16 +495,7 @@ function insertTracker(body, res) {
       db.query(deviceRecords, async (err, rows, fields) => {
         if (err) res.status(500).send(err)
         else {
-          let dateTimes = ''
-          for (let i = 0; i < rows.length; i++) {
-            dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
-          }
-          if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
-          const deleteDevices = `
-            DELETE FROM trackers
-            WHERE device_id = ${body.device_id}
-            AND datetime NOT IN (${dateTimes})
-          `
+          const deleteDevices = deleteQuery('trackers', rows, body.device_id)
           db.query(deleteDevices, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
@@ -540,6 +504,19 @@ function insertTracker(body, res) {
       })
     }
   })
+}
+
+function deleteQuery(table, rows, device_id) {
+  let dateTimes = ''
+  for (let i = 0; i < rows.length; i++) {
+    dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
+  }
+  if (dateTimes.length > 0) dateTimes = dateTimes.substring(0, dateTimes.length - 1)
+  return `
+    DELETE FROM ${table}
+    WHERE device_id = ${device_id}
+    AND datetime NOT IN (${dateTimes})
+  `
 }
 
 module.exports = router
