@@ -11,7 +11,7 @@ function sanitize(text) {
 function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
   if (!authToken) return res.status(403)
-  jwt.verify(authToken, process.env.TOKEN_SECRET, (err, authData) => {
+  jwt.verify(authToken, process.env.BCRYPT_SECRET, (err, authData) => {
     if (err) res.status(400).send('Invalid Token')
     else {
       req.verified_id = authData.user.id
@@ -36,8 +36,8 @@ router.get('/devices', verifyToken, (req, res) => {
         device.alias = rows[i].alias
         device.type = rows[i].type
         devices.push(device)
-        if (i === rows.length - 1) res.json(devices)
       }
+      res.json(devices)
     }
   })
 })

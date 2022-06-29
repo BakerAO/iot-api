@@ -1,5 +1,6 @@
+const brokerAddress = process.env.MQTT_BROKER
 const mqtt = require('mqtt')
-const client = mqtt.connect('mqtt://10.0.0.5')
+const client = mqtt.connect(`mqtt://${brokerAddress}`)
 
 client.on('connect', () => {
   client.subscribe('api')

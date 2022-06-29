@@ -12,7 +12,7 @@ function validateEmail(email) {
 function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
   if (!authToken) return res.status(403)
-  jwt.verify(authToken, process.env.TOKEN_SECRET, (err, authData) => {
+  jwt.verify(authToken, process.env.BCRYPT_SECRET, (err, authData) => {
     if (err) res.status(400).send('Invalid Token')
     else {
       req.verified_id = authData.user.id
@@ -45,7 +45,7 @@ router.post('/account/login', (req, res) => {
           }
           jwt.sign(
             { user: user },
-            process.env.TOKEN_SECRET,
+            process.env.BCRYPT_SECRET,
             { expiresIn: '7 days' },
             (err, token) => {
               res.json({ token: token })
