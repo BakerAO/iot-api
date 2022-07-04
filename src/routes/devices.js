@@ -43,7 +43,7 @@ router.get('/devices', verifyToken, (req, res) => {
 })
 
 router.get('/devices/types', verifyToken, (req, res) => {
-  res.send(['thermometer', 'water_flow', 'magnet', 'tracker'])
+  res.send(['thermometer', 'water_flow', 'magnet', 'tracker', 'simple_motor'])
 })
 
 router.post('/devices/register', verifyToken, (req, res) => {
@@ -82,7 +82,9 @@ router.post('/devices/register', verifyToken, (req, res) => {
 })
 
 router.post('/devices', (req, res) => {
-  if (req.body.flow_rate !== undefined) {
+  if (req.body.type === 'simple_motor') {
+    insertSimpleMotor(req.body, res)
+  } else if (req.body.flow_rate !== undefined) {
     insertFlow(req.body, res)
   } else if (req.body.temperature !== undefined) {
     insertThermometer(req.body, res)
@@ -303,6 +305,56 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
     }
   })
 })
+
+function insertSimpleMotor(body, res) {
+  const date = moment().format('YYYY-MM-DD HH:mm:ss')
+  const insertQuery = `
+    INSERT INTO simple_motors (
+      device_id,
+      datetime,
+      battery,
+      latitude,
+      longitude,
+      altitude,
+      satellites,
+      hdop,
+      valve_status
+    )
+    VALUES (
+      ${parseInt(body.device_id)},
+      '${date}',
+      ${parseFloat(body.battery) || 0},
+      ${parseFloat(body.latitude)},
+      ${parseFloat(body.longitude)},
+      ${parseFloat(body.altitude)},
+      ${parseInt(body.satellites)},
+      ${parseFloat(body.hdop)},
+      '${String(body.valve_status)}'
+    )
+  `
+  db.query(insertQuery, (err, rows, fields) => {
+    if (err) res.status(500).send(err)
+    else {
+      const deviceRecords = `
+        SELECT datetime
+        FROM simple_motors
+        WHERE device_id = ${body.device_id}
+        ORDER BY datetime DESC
+        LIMIT 100
+      `
+      db.query(deviceRecords, async (err, rows, fields) => {
+        if (err) res.status(500).send(err)
+        else {
+          const deleteDevices = deleteQuery('simple_motors', rows, body.device_id)
+          db.query(deleteDevices, (err, rows, fields) => {
+            if (err) res.status(500).send(err)
+            else res.sendStatus(200)
+          })
+        }
+      })
+    }
+  })
+}
 
 function insertThermometer(body, res) {
   const date = moment().format('YYYY-MM-DD HH:mm:ss')
