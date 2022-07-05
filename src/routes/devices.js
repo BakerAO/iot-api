@@ -97,6 +97,43 @@ router.post('/devices', (req, res) => {
   }
 })
 
+router.get('/simple_motors', verifyToken, (req, res) => {
+  const getDevices = `
+    SELECT *
+    FROM devices
+    WHERE type = 'simple_motor'
+    AND user_id = ${req.verified_id}
+  `
+  db.query(getDevices, (err, rows, fields) => {
+    if (err) res.status(500)
+    else {
+      let devices = []
+      for (let i = 0; i < rows.length; i++) {
+        let device = {}
+        device.id = rows[i].id
+        device.alias = rows[i].alias
+        const getWaterFlow = `
+          SELECT
+            battery,
+            valve_status,
+            datetime,
+            latitude,
+            longitude
+          FROM simple_motors
+          WHERE device_id = ${device.id}
+          ORDER BY datetime DESC
+        `
+        db.query(getWaterFlow, (error, records, flowFields) => {
+          if (error) res.status(500)
+          else device.records = records
+          devices.push(device)
+          if (i === rows.length - 1) res.json(devices)
+        })
+      }
+    }
+  })
+})
+
 router.get('/thermometers', verifyToken, (req, res) => {
   const getDevices = `
     SELECT *
