@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const moment = require('moment')
+const mqttClient = require('../mqttClient')
 const pool = require('../dbConnection')
 const { verifyToken, deleteQuery } = require('../helper')
 
@@ -39,6 +40,94 @@ router.get('/simple_motors', verifyToken, (req, res) => {
             else device.records = records
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)
+          })
+        }
+      }
+    })
+    connection.release()
+  })
+})
+
+router.post('/simple_motors/shut_off', verifyToken, (req, res) => {
+  pool.getConnection((err1, connection) => {
+    if (err1) {
+      connection.release()
+      throw err1;
+    }
+    const getDevice = `
+      SELECT *
+      FROM devices
+      WHERE type = 'simple_motor'
+      AND user_id = ${req.verified_id}
+      AND id = ${req.body.device_id}
+    `
+    connection.query(getDevice, (err, rows, fields) => {
+      if (err) res.status(500)
+      else {
+        if (rows.length < 1) {
+          res.status(402).send('No device found')
+        } else {
+          const getLatestStatus = `
+            SELECT valve_status, datetime
+            FROM simple_motors
+            WHERE device_id = ${rows[0].id}
+            ORDER BY datetime DESC
+            LIMIT 1
+          `
+          connection.query(getLatestStatus, (error, records, recFields) => {
+            if (error) res.status(500)
+            else {
+              if (records.length && records[0].valve_status === 'open') {
+                const topic = `${req.verified_id}/simple_motors`
+                const message = `${req.body.device_id}-SHUT_OFF`
+                mqttClient.publish(topic, message)
+                res.status(200).send(`${topic}, ${message} sent to broker`)
+              }
+            }
+          })
+        }
+      }
+    })
+    connection.release()
+  })
+})
+
+router.post('/simple_motors/open', verifyToken, (req, res) => {
+  pool.getConnection((err1, connection) => {
+    if (err1) {
+      connection.release()
+      throw err1;
+    }
+    const getDevice = `
+      SELECT *
+      FROM devices
+      WHERE type = 'simple_motor'
+      AND user_id = ${req.verified_id}
+      AND id = ${req.body.device_id}
+    `
+    connection.query(getDevice, (err, rows, fields) => {
+      if (err) res.status(500)
+      else {
+        if (rows.length < 1) {
+          res.status(402).send('No device found')
+        } else {
+          const getLatestStatus = `
+            SELECT valve_status, datetime
+            FROM simple_motors
+            WHERE device_id = ${rows[0].id}
+            ORDER BY datetime DESC
+            LIMIT 1
+          `
+          connection.query(getLatestStatus, (error, records, recFields) => {
+            if (error) res.status(500)
+            else {
+              if (records.length && records[0].valve_status === 'closed') {
+                const topic = `${req.verified_id}/simple_motors`
+                const message = `${req.body.device_id}-OPEN`
+                mqttClient.publish(topic, message)
+                res.status(200).send(`${topic}, ${message} sent to broker`)
+              }
+            }
           })
         }
       }
