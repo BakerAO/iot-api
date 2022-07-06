@@ -87,14 +87,19 @@ router.post('/devices', (req, res) => {
   switch (req.body.type) {
     case 'simple_motor':
       simpleMotors.insert(req.body, res)
+      break
     case 'water_flow':
       waterFlow.insert(req.body, res)
+      break
     case 'thermometer':
       thermometers.insert(req.body, res)
+      break
     case 'magnet':
       magnets.insert(req.body, res)
+      break
     case 'tracker':
       trackers.insert(req.body, res)
+      break
     default:
       res.sendStatus(402)
   }
