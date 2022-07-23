@@ -8,11 +8,64 @@ const waterFlow = require('./waterFlow')
 const magnets = require('./magnets')
 const trackers = require('./trackers')
 
+router.get('/device/:deviceId', verifyToken, (req, res) => {
+  pool.getConnection((err1, connection) => {
+    if (err1) {
+      connection.release()
+      throw err1
+    }
+    const getDevice = `
+      SELECT *
+      FROM devices
+      WHERE user_id = ?
+      AND id = ?
+    `
+    const values = [req.verified_id, req.params.deviceId]
+
+    connection.query(getDevice, values, (err2, rows, fields) => {
+      if (err2) res.status(500)
+      else {
+        if (rows.length === 0) res.status(404)
+        else {
+          const device = {
+            id: rows[0].id,
+            alias: rows[0].alias,
+            type: rows[0].type
+          }
+  
+          switch (device.type) {
+            case 'simple_motor': {
+              const getSimpleMotor = `
+                SELECT *
+                FROM simple_motors
+                WHERE device_id = ?
+                LIMIT 10
+              `
+              const values = [device.id]
+  
+              connection.query(getSimpleMotor, values, (err3, rows2, fields) => {
+                if (err3) res.status(500)
+                else {
+                  if (rows2.length === 0) res.status(404)
+                  else {
+                    res.json(rows2)
+                  }
+                }
+              })
+            }
+          }
+        }
+      }
+      connection.release()
+    })
+  })
+})
+
 router.get('/devices', verifyToken, (req, res) => {
   pool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
-      throw err1;
+      throw err1
     }
     const getDevices = `
       SELECT *
