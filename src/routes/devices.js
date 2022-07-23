@@ -36,7 +36,15 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
           switch (device.type) {
             case 'simple_motor': {
               const getSimpleMotor = `
-                SELECT *
+                SELECT
+                  altitude,
+                  battery,
+                  datetime,
+                  hdop,
+                  latitude,
+                  longitude,
+                  satellites,
+                  valve_status
                 FROM simple_motors
                 WHERE device_id = ?
                 LIMIT 10
