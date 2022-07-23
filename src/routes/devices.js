@@ -48,7 +48,8 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
                 else {
                   if (rows2.length === 0) res.status(404)
                   else {
-                    res.json(rows2)
+                    device.records = rows2
+                    res.json(device)
                   }
                 }
               })
