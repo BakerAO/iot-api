@@ -27,71 +27,70 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
 
     connection.query(getDevice, values, (err2, rows, fields) => {
       if (err2) res.status(500)
+      else if (rows.length === 0) res.status(404)
       else {
-        if (rows.length === 0) res.status(404)
-        else {
-          const device = {
-            id: rows[0].id,
-            alias: rows[0].alias,
-            type: rows[0].type
+        const device = {
+          id: rows[0].id,
+          alias: rows[0].alias,
+          type: rows[0].type
+        }
+
+        switch (device.type) {
+          case 'simple_motor': {
+            const getSimpleMotor = `
+              SELECT
+                datetime,
+                battery,
+                altitude,
+                hdop,
+                latitude,
+                longitude,
+                satellites,
+                valve_status
+              FROM simple_motors
+              WHERE device_id = ?
+              LIMIT 10
+            `
+            const values = [device.id]
+
+            connection.query(getSimpleMotor, values, (err3, rows2, fields) => {
+              if (err3) res.status(500)
+              else if (rows2.length === 0) res.status(404)
+              else {
+                device.records = rows2
+                res.json(device)
+              }
+            })
+            break
           }
+          case 'thermometer': {
+            const getTemperatures = `
+              SELECT
+                datetime,
+                battery,
+                temperature,
+                humidity
+              FROM thermometers
+              WHERE device_id = ?
+              LIMIT 100
+            `
+            const values = [device.id]
 
-          switch (device.type) {
-            case 'simple_motor': {
-              const getSimpleMotor = `
-                SELECT
-                  datetime,
-                  battery,
-                  altitude,
-                  hdop,
-                  latitude,
-                  longitude,
-                  satellites,
-                  valve_status
-                FROM simple_motors
-                WHERE device_id = ?
-                LIMIT 10
-              `
-              const values = [device.id]
-
-              connection.query(getSimpleMotor, values, (err3, rows2, fields) => {
-                if (err3) res.status(500)
-                else if (rows2.length === 0) res.status(404)
-                else {
-                  device.records = rows2
-                  res.json(device)
-                }
-              })
-              break
-            }
-            case 'thermometer': {
-              const getTemperatures = `
-                SELECT
-                  datetime,
-                  battery,
-                  temperature,
-                  humidity
-                FROM thermometers
-                WHERE device_id = ?
-                LIMIT 100
-              `
-              const values = [device.id]
-
-              connection.query(getTemperatures, values, (err3, rows2, fields) => {
-                if (err3) res.status(500)
-                else if (rows2.length === 0) res.status(404)
-                else {
-                  device.records = rows2
-                  res.json(device)
-                }
-              })
-              break
-            }
-            default:
-              res.status(404)
+            connection.query(getTemperatures, values, (err3, rows2, fields) => {
+              if (err3) res.status(500)
+              else if (rows2.length === 0) res.status(404)
+              else {
+                device.records = rows2
+                res.json(device)
+              }
+            })
+            break
           }
+          default:
+            res.status(404)
         }
       }
+
       connection.release()
     })
   })
