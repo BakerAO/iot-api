@@ -56,12 +56,10 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
 
               connection.query(getSimpleMotor, values, (err3, rows2, fields) => {
                 if (err3) res.status(500)
+                else if (rows2.length === 0) res.status(404)
                 else {
-                  if (rows2.length === 0) res.status(404)
-                  else {
-                    device.records = rows2
-                    res.json(device)
-                  }
+                  device.records = rows2
+                  res.json(device)
                 }
               })
               break
