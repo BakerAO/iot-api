@@ -49,6 +49,7 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
                 valve_status
               FROM simple_motors
               WHERE device_id = ?
+              ORDER BY datetime DESC
               LIMIT 10
             `
             const values = [device.id]
@@ -72,6 +73,7 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
                 humidity
               FROM thermometers
               WHERE device_id = ?
+              ORDER BY datetime DESC
               LIMIT 100
             `
             const values = [device.id]
