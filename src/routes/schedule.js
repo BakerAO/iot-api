@@ -93,7 +93,12 @@ router.post('/schedule/:deviceId', verifyToken, (req, res) => {
             ?
           )
         `
-        const values = [rows[0].id, req.body.frequency, req.body.startTime, req.body.duration]
+        const values = [
+          rows[0].id,
+          req.body.frequency,
+          req.body.startTime,
+          req.body.durationMinutes
+        ]
         connection.query(insertQuery, values, (err3, rows, fields) => {
           if (err3) res.status(400).send(err3)
           else res.sendStatus(200)
