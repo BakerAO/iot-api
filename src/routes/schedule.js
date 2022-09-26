@@ -85,7 +85,7 @@ router.post('/schedule/:deviceId', verifyToken, (req, res) => {
             device_id,
             frequency,
             startTime,
-            duration
+            durationMinutes
           ) VALUES (
             ?,
             ?,
