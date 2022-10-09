@@ -1,5 +1,6 @@
+import mqtt from 'mqtt'
+
 const brokerAddress = process.env.MQTT_BROKER
-const mqtt = require('mqtt')
 const client = mqtt.connect(`mqtt://${brokerAddress}`)
 
 client.on('connect', () => {
@@ -11,4 +12,4 @@ client.on('message', (topic, message) => {
   console.log('Message: ', topic.toString(), message.toString())
 })
 
-module.exports = client
+export default client

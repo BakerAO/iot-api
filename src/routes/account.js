@@ -1,24 +1,15 @@
-const router = require('express').Router()
-const jwt = require('jsonwebtoken')
-const bcrypt = require('bcrypt')
-const moment = require('moment')
-const db = require('../dbConnection')
+import { Router as ExRouter } from 'express'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcrypt'
+import moment from 'moment'
+import pool from '../dbConnection.js'
+import { verifyToken } from '../helper.js'
+
+const router = new ExRouter()
 
 function validateEmail(email) {
   let re = /\S+@\S+\.\S+/
   return re.test(email)
-}
-
-function verifyToken(req, res, next) {
-  const authToken = req.headers.auth_token
-  if (!authToken) return res.status(403)
-  jwt.verify(authToken, process.env.BCRYPT_SECRET, (err, authData) => {
-    if (err) res.status(400).send('Invalid Token')
-    else {
-      req.verified_id = authData.user.id
-      next()
-    }
-  })
 }
 
 router.get('/account/verify_token', verifyToken, async (req, res) => {
@@ -33,7 +24,7 @@ router.post('/account/login', (req, res) => {
       FROM users
       WHERE email = '${req.body.email}'
     `
-    db.query(getUserEmail, async (err, rows, fields) => {
+    pool.query(getUserEmail, async (err, rows, fields) => {
       if (err) res.status(400).send(err)
       else {
         const validPassword = await bcrypt.compare(req.body.password, rows[0].password)
@@ -63,7 +54,7 @@ router.post('/account/register', async (req, res) => {
     FROM users
     WHERE email = '${req.body.email}'
   `
-  db.query(emailExists, async (err, rows, fields) => {
+  pool.query(emailExists, async (err, rows, fields) => {
     if (err) res.status(500).send(err)
     else if (rows.length > 0) res.status(200).send('emailExists')
     else {
@@ -74,7 +65,7 @@ router.post('/account/register', async (req, res) => {
             INSERT INTO users (email, password, created)
             VALUES ('${req.body.email}', '${hash}', '${date}')
           `
-          db.query(insertUser, (err, rows, fields) => {
+          pool.query(insertUser, (err, rows, fields) => {
             if (err) res.status(500).send(err)
             else res.sendStatus(200)
           })
@@ -90,7 +81,7 @@ router.post('/account/password', verifyToken, async (req, res) => {
     FROM users
     WHERE id = '${req.verified_id}'
   `
-  db.query(userQuery, async (err, rows, fields) => {
+  pool.query(userQuery, async (err, rows, fields) => {
     if (err) res.status(400).send(err)
     else {
       const validPassword = await bcrypt.compare(req.body.oldPassword, rows[0].password)
@@ -103,7 +94,7 @@ router.post('/account/password', verifyToken, async (req, res) => {
               SET password = '${hash}'
               WHERE id = ${req.verified_id}
             `
-            db.query(updateQuery, (err, rows, fields) => {
+            pool.query(updateQuery, (err, rows, fields) => {
               if (err) res.status(500).send(err)
               else res.sendStatus(200)
             })
@@ -114,4 +105,4 @@ router.post('/account/password', verifyToken, async (req, res) => {
   })
 })
 
-module.exports = router
+export default router

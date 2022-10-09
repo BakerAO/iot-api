@@ -1,12 +1,14 @@
-const router = require('express').Router()
-const moment = require('moment')
-const pool = require('../dbConnection')
-const { sanitize, verifyToken } = require('../helper')
-const simpleMotors = require('./simpleMotors')
-const thermometers = require('./thermometers')
-const waterFlow = require('./waterFlow')
-const magnets = require('./magnets')
-const trackers = require('./trackers')
+import { Router as ExRouter } from 'express'
+import moment from 'moment'
+import pool from '../dbConnection.js'
+import { sanitize, verifyToken } from '../helper.js'
+import simpleMotors from './simpleMotors.js'
+import thermometers from './thermometers.js'
+import waterFlow from './waterFlow.js'
+import magnets from './magnets.js'
+import trackers from './trackers.js'
+
+const router = new ExRouter()
 
 router.get('/device/:deviceId', verifyToken, (req, res) => {
   pool.getConnection((err1, connection) => {
@@ -205,4 +207,4 @@ router.use(magnets.router)
 
 router.use(trackers.router)
 
-module.exports = router
+export default router

@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken')
-const moment = require('moment')
+import jwt from 'jsonwebtoken'
+import moment from 'moment'
 
-function sanitize(text) {
+export function sanitize(text) {
   return text.replace(/[^a-zA-Z0-9_ ]/g, '')
 }
 
-function verifyToken(req, res, next) {
+export function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
   if (!authToken) return res.status(403)
   jwt.verify(authToken, process.env.BCRYPT_SECRET, (err, authData) => {
@@ -17,7 +17,7 @@ function verifyToken(req, res, next) {
   })
 }
 
-function deleteQuery(table, rows, device_id) {
+export function deleteQuery(table, rows, device_id) {
   let dateTimes = ''
   for (let i = 0; i < rows.length; i++) {
     dateTimes += '\'' + moment(rows[i].datetime).format('YYYY-MM-DD HH:mm:ss') + '\','
@@ -28,10 +28,4 @@ function deleteQuery(table, rows, device_id) {
     WHERE device_id = ${device_id}
     AND datetime NOT IN (${dateTimes})
   `
-}
-
-module.exports = {
-  sanitize,
-  verifyToken,
-  deleteQuery
 }

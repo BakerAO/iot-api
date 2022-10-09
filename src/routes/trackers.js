@@ -1,7 +1,9 @@
-const router = require('express').Router()
-const moment = require('moment')
-const pool = require('../dbConnection')
-const { verifyToken, deleteQuery } = require('../helper')
+import { Router as ExRouter } from 'express'
+import moment from 'moment'
+import pool from '../dbConnection.js'
+import { verifyToken, deleteQuery } from '../helper.js'
+
+const router = new ExRouter()
 
 router.get('/trackers', verifyToken, (req, res) => {
   pool.getConnection((err1, connection) => {
@@ -97,7 +99,4 @@ function insert(body, res) {
   })
 }
 
-module.exports = {
-  router,
-  insert
-}
+export default { router, insert }

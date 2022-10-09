@@ -1,4 +1,4 @@
-const mysql = require('mysql')
+import mysql from 'mysql'
 
 const mysqlPool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -9,4 +9,4 @@ const mysqlPool = mysql.createPool({
   connectionLimit: 100
 })
 
-module.exports = mysqlPool
+export default mysqlPool

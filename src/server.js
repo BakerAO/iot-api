@@ -1,8 +1,10 @@
-const express = require('express')
-const routes = require('./routes/index')
+import express from 'express'
+import routes from './routes/index.js'
+// import dotenv from 'dotenv'
+// dotenv.config()
 
 const app = express()
-app.use(express.static(__dirname, { dotfiles: 'allow' } ))
+// app.use(express.static(__dirname, { dotfiles: 'allow' } ))
 app.use(express.json())
 app.use(function(req, res, next) {
   // res.header("Access-Control-Allow-Origin", "https://tidoba.com")

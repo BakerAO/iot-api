@@ -1,6 +1,20 @@
-const router = require('express').Router()
-const pool = require('../dbConnection')
-const { sanitize, verifyToken } = require('../helper')
+import { Router as ExRouter } from 'express'
+import AWS from 'aws-sdk'
+import pool from '../dbConnection.js'
+import { verifyToken } from '../helper.js'
+
+const router = new ExRouter()
+
+// AWS.config = new AWS.Config()
+
+// AWS.config.accessKeyId = process.env.AWS_ACCESS_KEY_ID
+// AWS.config.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+// AWS.config.region = process.env.AWS_REGION
+
+AWS.config.getCredentials(err => {
+  if (err) console.log(err)
+  else console.log('success')
+})
 
 router.get('/schedule/:deviceId', verifyToken, (req, res) => {
   pool.getConnection((err1, connection) => {
@@ -109,4 +123,4 @@ router.post('/schedule/:deviceId', verifyToken, (req, res) => {
   })
 })
 
-module.exports = router
+export default router

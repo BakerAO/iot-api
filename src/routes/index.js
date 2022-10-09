@@ -1,7 +1,9 @@
-const router = require('express').Router()
-const accountRoutes = require('./account')
-const deviceRoutes = require('./devices')
-const scheduleRoutes = require('./schedule')
+import { Router as ExRouter } from 'express'
+import accountRoutes from './account.js'
+import deviceRoutes from './devices.js'
+import scheduleRoutes from './schedule.js'
+
+const router = new ExRouter()
 
 router.get('/', (req, res) => {
   res.send(`
@@ -19,4 +21,4 @@ router.use(deviceRoutes)
 
 router.use(scheduleRoutes)
 
-module.exports = router
+export default router
