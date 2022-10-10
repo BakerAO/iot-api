@@ -1,13 +1,12 @@
 import { Router as ExRouter } from 'express'
 import moment from 'moment'
-import pool from '../dbConnection.js'
-import mqttClient from '../mqttClient.js'
+import { mysqlPool, mqttClient } from '../dataSources/index.js'
 import { verifyToken, deleteQuery } from '../helper.js'
 
 const router = new ExRouter()
 
 router.get('/water_flow', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;
@@ -53,7 +52,7 @@ router.get('/water_flow', verifyToken, (req, res) => {
 })
 
 router.post('/water_flow/shut_off', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;
@@ -96,7 +95,7 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
 })
 
 router.post('/water_flow/open', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;
@@ -139,7 +138,7 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
 })
 
 function insert(body, res) {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;

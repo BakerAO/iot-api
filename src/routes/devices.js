@@ -1,6 +1,6 @@
 import { Router as ExRouter } from 'express'
 import moment from 'moment'
-import pool from '../dbConnection.js'
+import { mysqlPool } from '../dataSources/index.js'
 import { sanitize, verifyToken } from '../helper.js'
 import simpleMotors from './simpleMotors.js'
 import thermometers from './thermometers.js'
@@ -11,7 +11,7 @@ import trackers from './trackers.js'
 const router = new ExRouter()
 
 router.get('/device/:deviceId', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1
@@ -101,7 +101,7 @@ router.get('/device/:deviceId', verifyToken, (req, res) => {
 })
 
 router.get('/devices', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1
@@ -134,7 +134,7 @@ router.get('/devices/types', verifyToken, (req, res) => {
 })
 
 router.post('/devices/register', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;

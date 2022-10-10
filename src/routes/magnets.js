@@ -1,12 +1,12 @@
 import { Router as ExRouter } from 'express'
 import moment from 'moment'
-import pool from '../dbConnection.js'
+import { mysqlPool } from '../dataSources/index.js'
 import { verifyToken } from '../helper.js'
 
 const router = new ExRouter()
 
 router.get('/magnets', verifyToken, (req, res) => {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;
@@ -46,7 +46,7 @@ router.get('/magnets', verifyToken, (req, res) => {
 })
 
 function insert(body, res) {
-  pool.getConnection((err1, connection) => {
+  mysqlPool.getConnection((err1, connection) => {
     if (err1) {
       connection.release()
       throw err1;
