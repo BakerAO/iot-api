@@ -18,7 +18,7 @@ router.get('/water_flow', verifyToken, (req, res) => {
       AND user_id = ${req.verified_id}
     `
     connection.query(getDevices, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         let devices = []
         for (let i = 0; i < rows.length; i++) {
@@ -39,7 +39,7 @@ router.get('/water_flow', verifyToken, (req, res) => {
             ORDER BY datetime DESC
           `
           connection.query(getWaterFlow, (error, records, flowFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else device.records = records
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)
@@ -65,7 +65,7 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
       AND id = ${req.body.device_id}
     `
     connection.query(getDevice, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         if (rows.length < 1) {
           res.status(402).send('No device found')
@@ -77,7 +77,7 @@ router.post('/water_flow/shut_off', verifyToken, (req, res) => {
             ORDER BY datetime DESC
           `
           connection.query(getLatestStatus, (error, records, recFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else {
               if (records.length && records[0].valve_status === 'open') {
                 const topic = `${req.verified_id}/water_flow`
@@ -108,7 +108,7 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
       AND id = ${req.body.device_id}
     `
     connection.query(getDevice, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         if (rows.length < 1) {
           res.status(402).send('No device found')
@@ -120,7 +120,7 @@ router.post('/water_flow/open', verifyToken, (req, res) => {
             ORDER BY datetime DESC
           `
           connection.query(getLatestStatus, (error, records, recFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else {
               if (records.length && records[0].valve_status === 'closed') {
                 const topic = `${req.verified_id}/water_flow`

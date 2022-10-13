@@ -22,8 +22,8 @@ router.get('/schedule/:deviceId', verifyToken, async (req, res) => {
     const values = [req.verified_id, req.params.deviceId]
 
     connection.query(getDevice, values, (err2, rows, fields) => {
-      if (err2) res.status(500)
-      else if (rows.length === 0) res.status(404)
+      if (err2) res.sendStatus(500)
+      else if (rows.length === 0) res.sendStatus(404)
       else {
         const device = {
           id: rows[0].id,
@@ -46,8 +46,8 @@ router.get('/schedule/:deviceId', verifyToken, async (req, res) => {
             const values = [device.id]
 
             connection.query(getSchedules, values, (err3, rows2, fields) => {
-              if (err3) res.status(500)
-              else if (rows2.length === 0) res.status(404)
+              if (err3) res.sendStatus(500)
+              else if (rows2.length === 0) res.sendStatus(404)
               else {
                 device.schedules = rows2
                 res.json(device)
@@ -55,8 +55,9 @@ router.get('/schedule/:deviceId', verifyToken, async (req, res) => {
             })
             break
           }
-          default:
-            res.status(404)
+          default: {
+            res.sendStatus(404)
+          }
         }
       }
 

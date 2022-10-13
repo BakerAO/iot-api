@@ -18,7 +18,7 @@ router.get('/trackers', verifyToken, (req, res) => {
       AND user_id = ${req.verified_id}
     `
     connection.query(getDevices, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         let devices = []
         for (let i = 0; i < rows.length; i++) {
@@ -32,7 +32,7 @@ router.get('/trackers', verifyToken, (req, res) => {
             ORDER BY datetime DESC
           `
           connection.query(getTrackerData, (error, records, trackerFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else device.records = records
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)

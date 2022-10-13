@@ -18,7 +18,7 @@ router.get('/simple_motors', verifyToken, (req, res) => {
       AND user_id = ${req.verified_id}
     `
     connection.query(getDevices, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         let devices = []
         for (let i = 0; i < rows.length; i++) {
@@ -37,7 +37,7 @@ router.get('/simple_motors', verifyToken, (req, res) => {
             ORDER BY datetime DESC
           `
           connection.query(getSimpleMotors, (error, records, flowFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else device.records = records
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)
@@ -63,7 +63,7 @@ router.post('/simple_motors/shut_off', verifyToken, (req, res) => {
       AND id = ${req.body.device_id}
     `
     connection.query(getDevice, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         if (rows.length < 1) {
           res.status(402).send('No device found')
@@ -76,7 +76,7 @@ router.post('/simple_motors/shut_off', verifyToken, (req, res) => {
             LIMIT 1
           `
           connection.query(getLatestStatus, (error, records, recFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else {
               if (records.length && records[0].valve_status === 'open') {
                 const topic = `${req.verified_id}/simple_motors`
@@ -107,7 +107,7 @@ router.post('/simple_motors/open', verifyToken, (req, res) => {
       AND id = ${req.body.device_id}
     `
     connection.query(getDevice, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         if (rows.length < 1) {
           res.status(402).send('No device found')
@@ -120,7 +120,7 @@ router.post('/simple_motors/open', verifyToken, (req, res) => {
             LIMIT 1
           `
           connection.query(getLatestStatus, (error, records, recFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else {
               if (records.length && records[0].valve_status === 'closed') {
                 const topic = `${req.verified_id}/simple_motors`

@@ -18,7 +18,7 @@ router.get('/magnets', verifyToken, (req, res) => {
       AND user_id = ${req.verified_id}
     `
     connection.query(getDevices, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         let devices = []
         for (let i = 0; i < rows.length; i++) {
@@ -33,7 +33,7 @@ router.get('/magnets', verifyToken, (req, res) => {
             LIMIT 20
           `
           connection.query(getMagnets, (error, records, magFields) => {
-            if (error) res.status(500)
+            if (error) res.sendStatus(500)
             else device.statuses = records
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)

@@ -18,7 +18,7 @@ router.get('/thermometers', verifyToken, (req, res) => {
       AND user_id = ${req.verified_id}
     `
     connection.query(getDevices, (err, rows, fields) => {
-      if (err) res.status(500)
+      if (err) res.sendStatus(500)
       else {
         let devices = []
         for (let i = 0; i < rows.length; i++) {
@@ -33,7 +33,7 @@ router.get('/thermometers', verifyToken, (req, res) => {
             LIMIT 10
           `
           connection.query(getTemperatures, (tempErr, tempRows, tempFields) => {
-            if (tempErr) res.status(500)
+            if (tempErr) res.sendStatus(500)
             else device.temperatures = tempRows
             devices.push(device)
             if (i === rows.length - 1) res.json(devices)
