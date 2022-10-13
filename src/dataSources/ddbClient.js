@@ -13,7 +13,7 @@ import AWS from 'aws-sdk'
 
 AWS.config.getCredentials(err => {
   if (err) console.log(err)
-  else console.log('success')
+  else console.log('Valid AWS Credentials')
 })
 
 const ddbClient = new AWS.DynamoDB.DocumentClient()

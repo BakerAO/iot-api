@@ -9,7 +9,7 @@ client.on('connect', () => {
 })
 
 client.on('message', (topic, message) => {
-  console.log('Message: ', topic.toString(), message.toString())
+  console.log('Broker Message: ', topic.toString(), message.toString())
 })
 
 export default client
