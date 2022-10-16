@@ -73,7 +73,9 @@ router.post('/schedule/:deviceId', verifyToken, (req, res) => {
       throw err1;
     }
     const getDevice = `
-      SELECT id
+      SELECT
+        id,
+        type
       FROM devices
       WHERE user_id = ?
       AND id = ?
@@ -81,33 +83,43 @@ router.post('/schedule/:deviceId', verifyToken, (req, res) => {
     const values = [req.verified_id, req.params.deviceId]
 
     connection.query(getDevice, values, (err2, rows, fields) => {
-      if (err2 || rows.length === 0) res.status(400).send(err2)
+      if (err2 || rows.length !== 1) res.status(400).send(err2)
       else {
-        const insertQuery = `
-          INSERT INTO schedules (
-            device_id,
-            frequency,
-            startTime,
-            durationMinutes
-          ) VALUES (
-            ?,
-            ?,
-            ?,
-            ?
-          )
-        `
-        const values = [
-          rows[0].id,
-          req.body.frequency,
-          req.body.startTime,
-          req.body.durationMinutes
-        ]
-        connection.query(insertQuery, values, (err3, rows, fields) => {
-          if (err3) res.status(400).send(err3)
-          else res.sendStatus(200)
-        })
+        switch (rows[0].type) {
+          case 'simple_motor': {
+            const insertQuery = `
+              INSERT INTO schedules (
+                device_id,
+                frequency,
+                startTime,
+                durationMinutes
+              ) VALUES (
+                ?,
+                ?,
+                ?,
+                ?
+              )
+            `
+            const values = [
+              rows[0].id,
+              req.body.frequency,
+              req.body.startTime,
+              req.body.durationMinutes
+            ]
+            connection.query(insertQuery, values, (err3, rows, fields) => {
+              if (err3) res.status(400).send(err3)
+              else res.sendStatus(200)
+            })
+            break
+
+          }
+          default: {
+            res.sendStatus(404)
+          }
+        }
       }
     })
+
     connection.release()
   })
 })
