@@ -7,7 +7,7 @@ export function sanitize(text) {
 
 export function verifyToken(req, res, next) {
   const authToken = req.headers.auth_token
-  if (!authToken) return res.sendStatus(403)
+  if (!authToken) return res.sendStatus(418)
   jwt.verify(authToken, process.env.BCRYPT_SECRET, (err, authData) => {
     if (err) res.status(400).send('Invalid Token')
     else {
